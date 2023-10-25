@@ -18,5 +18,6 @@ It can also have optionally one or more condition.
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
 Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml).
 Add to the end of the file configuration.yaml this line: automations: automations.yaml
+Run: npm -g install suncalc
 Restart zigbee2mqtt so it load all the extensions (this seems to me the best way).
 
