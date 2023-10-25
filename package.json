@@ -1,0 +1,30 @@
+{
+  "name": "zigbee2mqtt-automations",
+  "version": "1.0.1",
+  "description": "Automations extension for zigbee2mqtt",
+  "devDependencies": {
+    "@types/node": "^18.17.1",
+    "@typescript-eslint/eslint-plugin": "^6.8.0",
+    "@typescript-eslint/parser": "^6.8.0",
+    "eslint": "^8.51.0",
+    "typescript": "^5.0.4",
+    "zigbee2mqtt": "^1.33.1"
+  },
+  "scripts": {
+    "start": "tsc --watch",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Luligu/zigbee2mqtt-automations"
+  },
+  "author": "Luligu",
+  "license": "GPL-3.0 license",
+  "bugs": {
+    "url": "https://github.com/Luligu/zigbee2mqtt-automations/issues"
+  },
+  "homepage": "https://github.com/Luligu/zigbee2mqtt-automations#readme",
+  "dependencies": {
+    "suncalc": "^1.9.0"
+  }
+}
