@@ -1,6 +1,6 @@
 {
   "name": "zigbee2mqtt-automations",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Automations extension for zigbee2mqtt",
   "devDependencies": {
     "@types/node": "^18.17.1",
