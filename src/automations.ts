@@ -309,9 +309,9 @@ class AutomationsExtension {
     timeEvent.setHours(23);
     timeEvent.setMinutes(59);
     timeEvent.setSeconds(59);
-    this.logger.debug(`[Automations] Set midnight timout at ${timeEvent.toLocaleString()}`);
+    this.logger.debug(`[Automations] Set time automations reloading timout at ${timeEvent.toLocaleString()}`);
     const timeout = setTimeout(() => {
-      this.logger.info(`[Automations] Midnight timout running`);
+      this.logger.info(`[Automations] Time automations reloading timout running`);
       Object.keys(this.timeAutomations).forEach(key => {
         const timeAutomationArray = this.timeAutomations[key];
         timeAutomationArray.forEach(timeAutomation => {
@@ -509,6 +509,7 @@ class AutomationsExtension {
         trigger = configTrigger as ConfigStateTrigger;
         attribute = trigger.attribute || 'state';
 
+        //this.log.warning(`Trigger check [${automation.name}]`, update, from, to);
         if (!Object.prototype.hasOwnProperty.call(update, attribute) || /*!from.hasOwnProperty(attribute) ||*/ !Object.prototype.hasOwnProperty.call(to, attribute)) {
           this.logger.debug(`[Automations] Trigger check [${automation.name}] no attribute or state update for #${configTrigger.entity}#`);
           return null;
