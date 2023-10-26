@@ -15,14 +15,14 @@
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-ignore
-import * as stringify from 'json-stable-stringify-without-jsonify';
+// import * as stringify from 'json-stable-stringify-without-jsonify';
 // @ts-ignore
 import yaml from '../util/yaml';
 // @ts-ignore
 import data from '../util/data';
 // @ts-ignore
 import * as SunCalc from 'suncalc';
-
+import { Buffer } from 'buffer';
 //
 // Use https://www.latlong.net/ to get latidute and longitude based on your adress
 //
@@ -69,17 +69,23 @@ const TIME_STRING_REGEXP = /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/;
 
 type ConfigStateType = string | number | boolean;
 type ConfigActionType = string;
-type ConfigAttribute = string;
-type Update = Record<string, ConfigStateType>;
-type Second = number;
-type TimeString = string; // e.g. "15:05:00"
+type ConfigAttributeType = string;
+
+type StateChangeType = string | number | boolean;
+type StateChangeUpdate = Record<string, StateChangeType>;
+type StateChangeFrom = Record<string, StateChangeType>;
+type StateChangeTo = Record<string, StateChangeType>;
+
+type TriggerForType = number;
+type TurnOffAfterType = number;
+type TimeStringType = string; // e.g. "15:05:00"
 
 class Time {
   private readonly h: number;
   private readonly m: number;
   private readonly s: number;
 
-  constructor(time?: TimeString) {
+  constructor(time?: TimeStringType) {
     if (!time) {
       const now = new Date();
       this.h = now.getHours();
@@ -145,7 +151,7 @@ class Time {
 interface ConfigTrigger {
   platform: ConfigPlatform;
   entity: EntityId | EntityId[];
-  for?: Second;
+  for?: TriggerForType;
   event?: string;
   latitude?: number;
   longitude?: number;
@@ -156,22 +162,23 @@ interface ConfigActionTrigger extends ConfigTrigger {
 }
 
 interface ConfigStateTrigger extends ConfigTrigger {
-  attribute?: ConfigAttribute;
+  attribute?: ConfigAttributeType;
   state: ConfigStateType | ConfigStateType[];
 }
 
 interface ConfigNumericStateTrigger extends ConfigTrigger {
-  attribute: ConfigAttribute;
+  attribute: ConfigAttributeType;
   above?: number;
   below?: number;
 }
 
-type ConfigActionData = Record<ConfigAttribute, ConfigStateType>;
+type ConfigActionData = Record<ConfigAttributeType, ConfigStateType>;
 
 interface ConfigAction {
   entity: EntityId;
   service: ConfigService;
   data?: ConfigActionData;
+  turn_off_after?: TurnOffAfterType;
 }
 
 interface ConfigCondition {
@@ -183,19 +190,19 @@ interface ConfigEntityCondition extends ConfigCondition {
 }
 
 interface ConfigStateCondition extends ConfigEntityCondition {
-  attribute?: ConfigAttribute;
+  attribute?: ConfigAttributeType;
   state: ConfigStateType;
 }
 
 interface ConfigNumericStateCondition extends ConfigEntityCondition {
-  attribute: ConfigAttribute;
+  attribute: ConfigAttributeType;
   above?: number;
   below?: number;
 }
 
 interface ConfigTimeCondition extends ConfigCondition {
-  after?: TimeString;
-  before?: TimeString;
+  after?: TimeStringType;
+  before?: TimeStringType;
   weekday?: string[];
 }
 
@@ -260,7 +267,9 @@ class AutomationsExtension {
   private readonly mqttBaseTopic: string;
   private readonly eventAutomations: EventAutomations = {};
   private readonly timeAutomations: TimeAutomations = {};
-  private readonly timeouts: Record<string, NodeJS.Timeout>;
+  private readonly triggerForTimeouts: Record<string, NodeJS.Timeout>;
+  private readonly turnOffAfterTimeouts: Record<string, NodeJS.Timeout>;
+  private midnightTimeout: NodeJS.Timeout;
   private readonly log: InternalLogger;
 
   constructor(
@@ -274,7 +283,9 @@ class AutomationsExtension {
   ) {
     this.log = new InternalLogger();
     this.mqttBaseTopic = settings.get().mqtt.base_topic;
-    this.timeouts = {};
+    this.triggerForTimeouts = {};
+    this.turnOffAfterTimeouts = {};
+    //this.midnightTimeout;
     this.parseConfig(settings.get().automations || {});
 
     this.logger.info(`[Automations] Extension loaded`);
@@ -309,9 +320,9 @@ class AutomationsExtension {
     timeEvent.setHours(23);
     timeEvent.setMinutes(59);
     timeEvent.setSeconds(59);
-    this.logger.debug(`[Automations] Set time automations reloading timout at ${timeEvent.toLocaleString()}`);
-    const timeout = setTimeout(() => {
-      this.logger.info(`[Automations] Time automations reloading timout running`);
+    this.logger.debug(`[Automations] Set timeout for automations reloading at ${timeEvent.toLocaleString()}`);
+    this.midnightTimeout = setTimeout(() => {
+      this.logger.info(`[Automations] Timeout for automations reloading executing`);
       Object.keys(this.timeAutomations).forEach(key => {
         const timeAutomationArray = this.timeAutomations[key];
         timeAutomationArray.forEach(timeAutomation => {
@@ -320,7 +331,7 @@ class AutomationsExtension {
       });
       this.startMidnightTimeout();
     }, timeEvent.getTime() - now.getTime() + 2000);
-    timeout.unref();
+    this.midnightTimeout.unref();
   }
 
   private parseConfig(configAutomations: ConfigAutomations | string) {
@@ -459,14 +470,14 @@ class AutomationsExtension {
         this.logger.debug(`[Automations] Set timout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
 
         const timeout = setTimeout(() => {
-          delete this.timeouts[automation.name];
+          delete this.triggerForTimeouts[automation.name];
           //this.log.debug(`Timout for [${automation.name}]`);
           this.logger.debug(`[Automations] Timout for [${automation.name}]`);
           this.runActionsWithConditions(automation, automation.condition, automation.action);
         }, timeEvent.getTime() - now.getTime());
 
         timeout.unref();
-        this.timeouts[automation.name] = timeout;
+        this.triggerForTimeouts[automation.name] = timeout;
       }
       else {
         //this.log.debug(`Timout at ${timeEvent.toLocaleString()} is passed for [${automation.name}]`);
@@ -483,19 +494,19 @@ class AutomationsExtension {
    * false - return and stop timer
    * true - start the automation
    */
-  private checkTrigger(automation: EventAutomation, configTrigger: ConfigTrigger, update: Update, from: Update, to: Update): boolean | null {
+  private checkTrigger(automation: EventAutomation, configTrigger: ConfigTrigger, update: StateChangeUpdate, from: StateChangeFrom, to: StateChangeTo): boolean | null {
     let trigger;
     let attribute;
     let result;
     let actions;
     let states;
 
-    this.logger.debug(`[Automations] Trigger check [${automation.name}]`);
+    //this.logger.debug(`[Automations] Trigger check [${automation.name}]`);
 
     switch (configTrigger.platform) {
       case ConfigPlatform.ACTION:
         if (!Object.prototype.hasOwnProperty.call(update, 'action')) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no action for #${configTrigger.entity}#`);
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] no action in update for #${configTrigger.entity}#`);
           return null;
         }
 
@@ -511,12 +522,12 @@ class AutomationsExtension {
 
         //this.log.warning(`Trigger check [${automation.name}]`, update, from, to);
         if (!Object.prototype.hasOwnProperty.call(update, attribute) || /*!from.hasOwnProperty(attribute) ||*/ !Object.prototype.hasOwnProperty.call(to, attribute)) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no attribute or state update for #${configTrigger.entity}#`);
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} in update or to for #${configTrigger.entity}#`);
           return null;
         }
 
         if (from[attribute] === to[attribute]) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no attribute or state change for #${configTrigger.entity}#`);
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} change for #${configTrigger.entity}#`);
           return null;
         }
 
@@ -530,38 +541,38 @@ class AutomationsExtension {
         attribute = trigger.attribute;
 
         if (!Object.prototype.hasOwnProperty.call(update, attribute) || /*!from.hasOwnProperty(attribute) ||*/ !Object.prototype.hasOwnProperty.call(to, attribute)) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no attribute update for #${configTrigger.entity}#`);
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} in update or to for #${configTrigger.entity}#`);
           return null;
         }
 
         if (from[attribute] === to[attribute]) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no attribute change for #${configTrigger.entity}#`);
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} change for #${configTrigger.entity}#`);
           return null;
         }
 
         if (typeof trigger.above !== 'undefined') {
           if (to[attribute] < trigger.above) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] attribute < trigger for #${configTrigger.entity}#`);
+            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} < ${trigger.above} for #${configTrigger.entity}#`);
             return false;
           }
           if (from[attribute] >= trigger.above) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] attribute already triggered for #${configTrigger.entity}#`);
+            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} already triggered for #${configTrigger.entity}#`);
             return null;
           }
         }
 
         if (typeof trigger.below !== 'undefined') {
           if (to[attribute] > trigger.below) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] attribute > trigger for #${configTrigger.entity}#`);
+            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} > ${trigger.below} for #${configTrigger.entity}#`);
             return false;
           }
           if (from[attribute] <= trigger.below) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] attribute already triggered for #${configTrigger.entity}#`);
+            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} already triggered for #${configTrigger.entity}#`);
             return null;
           }
         }
 
-        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is true for #${configTrigger.entity}# attribute:${attribute}`);
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is true for #${configTrigger.entity}# attribute: ${attribute}`);
         return true;
     }
 
@@ -659,8 +670,8 @@ class AutomationsExtension {
 
   private runActions(automation: EventAutomation, actions: ConfigAction[]): void {
     for (const action of actions) {
-      const destination = this.zigbee.resolveEntity(action.entity);
-      if (!destination) {
+      const entity = this.zigbee.resolveEntity(action.entity);
+      if (!entity) {
         this.logger.error(`[Automations] Entity #${action.entity}# not found so ignoring this action`);
         continue;
       }
@@ -682,9 +693,41 @@ class AutomationsExtension {
           data = action.data as ConfigActionData;
           break;
       }
-      this.logger.info(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# sending ${stringify(data)}`);
-      this.mqtt.onMessage(`${this.mqttBaseTopic}/${destination.name}/set`, stringify(data));
+      //this.logger.info(`[Automations] Run automation [${automation.name}] send ${stringify(data)} to entity #${action.entity}# `);
+      this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      this.mqtt.onMessage(`${this.mqttBaseTopic}/${entity.name}/set`, Buffer.from(this.payloadStringify(data)));
+      if (action.turn_off_after) {
+        this.startActionTimeout(automation, action);
+      }
     }
+  }
+
+  private stopActionTimeout(automation: EventAutomation, action: ConfigAction): void {
+    const timeout = this.turnOffAfterTimeouts[automation.name + action.entity];
+    if (timeout) {
+      this.logger.debug(`[Automations] Stop turn_off_after timeout for automation [${automation.name}]`);
+      clearTimeout(timeout);
+      delete this.turnOffAfterTimeouts[automation.name + action.entity];
+    }
+  }
+
+  private startActionTimeout(automation: EventAutomation, action: ConfigAction): void {
+    this.logger.debug(`[Automations] Start ${action.turn_off_after} seconds turn_off_after timeout for automation [${automation.name}]`);
+    const timeout = setTimeout(() => {
+      delete this.turnOffAfterTimeouts[automation.name + action.entity];
+      this.logger.debug(`[Automations] Turn_off_after timeout for automation [${automation.name}]`);
+      const entity = this.zigbee.resolveEntity(action.entity);
+      if (!entity) {
+        this.logger.error(`[Automations] Entity #${action.entity}# not found so ignoring this action`);
+        this.stopActionTimeout(automation, action);
+        return;
+      }
+      const data = { state: StateOnOff.OFF };
+      this.logger.info(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      this.mqtt.onMessage(`${this.mqttBaseTopic}/${entity.name}/set`, Buffer.from(this.payloadStringify(data)));
+    }, action.turn_off_after! * 1000);
+    timeout.unref();
+    this.turnOffAfterTimeouts[automation.name + action.entity] = timeout;
   }
 
   private runActionsWithConditions(automation: EventAutomation, conditions: ConfigCondition[], actions: ConfigAction[]): void {
@@ -697,29 +740,33 @@ class AutomationsExtension {
   }
 
   private stopTimeout(automation: EventAutomation): void {
-    const timeout = this.timeouts[automation.name];
+    const timeout = this.triggerForTimeouts[automation.name];
     if (timeout) {
       //this.log.debug(`Stop timeout for automation [${automation.name}] trigger: ${this.stringify(automation.trigger)}`);
-      this.logger.debug(`[Automations] Stop timeout for automation [${automation.name}]`);
+      this.logger.debug(`[Automations] Stop trigger-for timeout for automation [${automation.name}]`);
       clearTimeout(timeout);
-      delete this.timeouts[automation.name];
+      delete this.triggerForTimeouts[automation.name];
     }
   }
 
-  private startTimeout(automation: EventAutomation, time: Second): void {
+  private startTimeout(automation: EventAutomation): void {
+    if (automation.trigger.for === undefined || automation.trigger.for === 0) {
+      this.logger.error(`[Automations] Start ${automation.trigger.for} seconds trigger-for timeout error for automation [${automation.name}]`);
+      return;
+    }
     //this.log.debug(`Start timeout ${time} sec for automation [${automation.name}] trigger: ${this.stringify(automation.trigger)}`);
-    this.logger.debug(`[Automations] Start ${time} seconds timeout for automation [${automation.name}]`);
+    this.logger.debug(`[Automations] Start ${automation.trigger.for} seconds trigger-for timeout for automation [${automation.name}]`);
     const timeout = setTimeout(() => {
-      delete this.timeouts[automation.name];
+      delete this.triggerForTimeouts[automation.name];
       //this.log.debug(`Timeout for automation [${automation.name}] trigger: ${this.stringify(automation.trigger)}`);
-      this.logger.debug(`[Automations] Timeout for automation [${automation.name}]`);
+      this.logger.debug(`[Automations] Trigger-for timeout for automation [${automation.name}]`);
       this.runActionsWithConditions(automation, automation.condition, automation.action);
-    }, time * 1000);
+    }, automation.trigger.for * 1000);
     timeout.unref();
-    this.timeouts[automation.name] = timeout;
+    this.triggerForTimeouts[automation.name] = timeout;
   }
 
-  private runAutomationIfMatches(automation: EventAutomation, update: Update, from: Update, to: Update): void {
+  private runAutomationIfMatches(automation: EventAutomation, update: StateChangeUpdate, from: StateChangeFrom, to: StateChangeTo): void {
     const triggerResult = this.checkTrigger(automation, automation.trigger, update, from, to);
     if (triggerResult === false) {
       this.stopTimeout(automation);
@@ -728,22 +775,23 @@ class AutomationsExtension {
     if (triggerResult === null) {
       return;
     }
-    //this.log.debug(`Start automation [${automation.name}]`);
-    this.logger.debug(`[Automations] Start automation [${automation.name}]`);
-    const timeout = this.timeouts[automation.name];
+    const timeout = this.triggerForTimeouts[automation.name];
     if (timeout) {
-      //this.log.warning(`Waiting timeout for automation [${automation.name}] ...`);
-      this.logger.warning(`[Automations] Waiting timeout for automation [${automation.name}]`);
+      //this.log.warning(`Waiting trigger-for timeout for automation [${automation.name}]`);
+      this.logger.debug(`[Automations] Waiting trigger-for timeout for automation [${automation.name}]`);
       return;
+    } else {
+      //this.log.warning(`Start automation [${automation.name}]`);
+      this.logger.debug(`[Automations] Start automation [${automation.name}]`);
     }
     if (automation.trigger.for) {
-      this.startTimeout(automation, automation.trigger.for);
+      this.startTimeout(automation);
       return;
     }
     this.runActionsWithConditions(automation, automation.condition, automation.action);
   }
 
-  private findAndRun(entityId: EntityId, update: Update, from: Update, to: Update): void {
+  private findAndRun(entityId: EntityId, update: StateChangeUpdate, from: StateChangeFrom, to: StateChangeTo): void {
     const automations = this.eventAutomations[entityId];
     if (!automations) {
       return;
@@ -762,17 +810,27 @@ class AutomationsExtension {
 
   async stop() {
     this.logger.debug(`[Automations] Extension unloading`);
-    for (const key of Object.keys(this.timeouts)) {
+    for (const key of Object.keys(this.triggerForTimeouts)) {
       this.logger.debug(`[Automations] Clearing timeout ${key}`);
-      clearTimeout(this.timeouts[key]);
-      delete this.timeouts[key];
+      clearTimeout(this.triggerForTimeouts[key]);
+      delete this.triggerForTimeouts[key];
     }
+    for (const key of Object.keys(this.turnOffAfterTimeouts)) {
+      this.logger.debug(`[Automations] Clearing timeout ${key}`);
+      clearTimeout(this.turnOffAfterTimeouts[key]);
+      delete this.turnOffAfterTimeouts[key];
+    }
+    clearTimeout(this.midnightTimeout);
     this.logger.debug(`[Automations] Removing listeners`);
     this.eventBus.removeListeners(this);
     this.logger.debug(`[Automations] Extension unloaded`);
   }
 
-  private stringify(payload: object, enableColors = false, colorPayload = 255, colorKey = 255, colorString = 35, colorNumber = 220, colorBoolean = 159, colorUndefined = 1): string {
+  private payloadStringify(payload: object): string {
+    return this.stringify(payload, false, 255, 255, 35, 220, 159, 1, '"', '"')
+  }
+
+  private stringify(payload: object, enableColors = false, colorPayload = 255, colorKey = 255, colorString = 35, colorNumber = 220, colorBoolean = 159, colorUndefined = 1, keyQuote = '', stringQuote = '\''): string {
     const clr = (color: number) => {
       return enableColors ? `\x1b[38;5;${color}m` : '';
     };
@@ -789,7 +847,7 @@ class AutomationsExtension {
       let newValue = '';
       newValue = value;
       if (typeof newValue === 'string') {
-        newValue = `${clr(colorString)}'${newValue}'${reset()}`;
+        newValue = `${clr(colorString)}${stringQuote}${newValue}${stringQuote}${reset()}`;
       }
       if (typeof newValue === 'number') {
         newValue = `${clr(colorNumber)}${newValue}${reset()}`;
@@ -801,9 +859,13 @@ class AutomationsExtension {
         newValue = `${clr(colorUndefined)}undefined${reset()}`;
       }
       if (typeof newValue === 'object') {
-        newValue = this.stringify(newValue, enableColors, colorPayload, colorKey, colorString, colorNumber, colorBoolean, colorUndefined);
+        newValue = this.stringify(newValue, enableColors, colorPayload, colorKey, colorString, colorNumber, colorBoolean, colorUndefined, keyQuote, stringQuote);
       }
-      string += `${clr(colorKey)}${key}${reset()}: ${newValue}`;
+      // new
+      if (isArray)
+        string += `${newValue}`;
+      else
+        string += `${clr(colorKey)}${keyQuote}${key}${keyQuote}${reset()}: ${newValue}`;
     });
     return string += ` ${clr(colorPayload)}` + (isArray ? ']' : '}') + `${reset()}`;
   }
