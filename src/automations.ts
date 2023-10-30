@@ -209,6 +209,7 @@ interface ConfigTimeCondition extends ConfigCondition {
 // Yaml defined automations
 type ConfigAutomations = {
   [key: string]: {
+    active?: boolean,
     trigger: ConfigTrigger,
     action: ConfigAction | ConfigAction[],
     condition?: ConfigCondition | ConfigCondition[],
@@ -348,7 +349,10 @@ class AutomationsExtension {
       const triggers = toArray(configAutomation.trigger);
 
       //this.log.debug(`Entries Start`, key);
-
+      if (configAutomation.active === false) {
+        this.logger.info(`[Automations] Automation [${key}] not registered since active is false`);
+        return;
+      }
       if (!configAutomation.trigger) {
         this.logger.error(`[Automations] Config validation error for [${key}]: trigger not specified`);
         return;
@@ -392,7 +396,6 @@ class AutomationsExtension {
         }
       }
 
-      //this.log.debug(`Entries Load triggers`, key);
       for (const trigger of triggers) {
         //this.log.debug(`Switch `, trigger.platform, trigger.entity);
         switch (trigger.platform) {
