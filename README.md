@@ -18,7 +18,8 @@ It can also have optionally one or more condition.
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
 Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml).
 Add to the end of the file configuration.yaml this line: automations: automations.yaml
-Run: npm -g install suncalc
+Run in zigbee2mqtt: npm install suncalc
+In frontend Extensions add an extensione. Name it automation.js. In the editor delete the default extensione and copy paste automation.js.
 Restart zigbee2mqtt so it load all the extensions (this seems to me the best way).
 
 # Config file automations.yaml:
@@ -55,5 +56,5 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
     entity:               ## Name of the entity to send the payload to
     payload:              ## Any attributes indented on the next rows (example: state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } etc etc)
     logger?:              ## Values: debug info warn error (default debug)
-    turn_off_after?:      ## Number: seconds for turning off entity
+    turn_off_after?:      ## Number: seconds before turning off entity
 ```
