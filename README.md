@@ -21,3 +21,39 @@ Add to the end of the file configuration.yaml this line: automations: automation
 Run: npm -g install suncalc
 Restart zigbee2mqtt so it load all the extensions (this seems to me the best way).
 
+# Config file automations.yaml:
+
+```
+[Your name for automation]
+  active?: 
+  trigger: 
+    platform:
+    entity: 
+    for?: 
+    event?: 
+    latitude?: 
+    longitude?:
+    action: 
+    attribute?: 
+    state: 
+    attribute:
+    above?:
+    below?:
+
+  condition?:
+    entity:
+    attribute?:
+    state: 
+    attribute: 
+    above?: 
+    below?: 
+    after?: 
+    before?:
+    weekday?:
+
+  action: 
+    entity: 
+    service: 
+    data?: 
+    turn_off_after?: 
+```
