@@ -25,7 +25,7 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
 
 ```
 [Your name for automation]
-  active?: 
+  active?:                ## Values: true or false (default true: the automation is active)
   trigger: 
     platform:
     entity: 
@@ -52,8 +52,8 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
     weekday?:
 
   action: 
-    entity: 
-    service: 
-    data?: 
-    turn_off_after?: 
+    entity:               ## Name of the entity to send the payload to
+    payload:              ## Any attributes indented on the next rows (example: state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } etc etc)
+    logger?:              ## Values: debug info warn error (default debug)
+    turn_off_after?:      ## Number: seconds for turning off entity
 ```

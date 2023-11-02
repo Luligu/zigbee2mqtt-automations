@@ -174,11 +174,13 @@ interface ConfigNumericStateTrigger extends ConfigTrigger {
 }
 
 type ConfigActionData = Record<ConfigAttributeType, ConfigStateType>;
+type ConfigActionPayload = Record<ConfigAttributeType, ConfigStateType>;
 
 interface ConfigAction {
   entity: EntityId;
   service: ConfigService;
   data?: ConfigActionData;
+  payload?: ConfigActionPayload;
   turn_off_after?: TurnOffAfterType;
   logger?: LoggerType;
 }
@@ -380,7 +382,7 @@ class AutomationsExtension {
       // Check actions
       //this.log.debug(`Entries Check actions`, key);
       for (const action of actions) {
-        if (!services.includes(action.service)) {
+        if (!services.includes(action.service) && action.payload === undefined) {
           this.logger.error(`[Automations] Config validation error for [${key}]: unknown action service '${action.service}'`);
           return;
         }
@@ -697,6 +699,11 @@ class AutomationsExtension {
         case ConfigService.CUSTOM:
           data = action.data as ConfigActionData;
           break;
+      }
+      let payload: ConfigActionPayload;
+      if (action.payload) {
+        payload = action.payload as ConfigActionPayload;
+        data = payload;
       }
       //this.logger.info(`[Automations] Run automation [${automation.name}] send ${stringify(data)} to entity #${action.entity}# `);
       if (action.logger === 'info')
