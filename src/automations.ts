@@ -79,6 +79,7 @@ type StateChangeTo = Record<string, StateChangeType>;
 type TriggerForType = number;
 type TurnOffAfterType = number;
 type TimeStringType = string; // e.g. "15:05:00"
+type LoggerType = string;
 
 class Time {
   private readonly h: number;
@@ -179,6 +180,7 @@ interface ConfigAction {
   service: ConfigService;
   data?: ConfigActionData;
   turn_off_after?: TurnOffAfterType;
+  logger?: LoggerType;
 }
 
 interface ConfigCondition {
@@ -697,7 +699,14 @@ class AutomationsExtension {
           break;
       }
       //this.logger.info(`[Automations] Run automation [${automation.name}] send ${stringify(data)} to entity #${action.entity}# `);
-      this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      if (action.logger === 'info')
+        this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+      else if (action.logger === 'warn')
+        this.logger.warn(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+      else if (action.logger === 'error')
+        this.logger.error(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+      else
+        this.logger.debug(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
       this.mqtt.onMessage(`${this.mqttBaseTopic}/${entity.name}/set`, Buffer.from(this.payloadStringify(data)));
       if (action.turn_off_after) {
         this.startActionTimeout(automation, action);
@@ -726,7 +735,15 @@ class AutomationsExtension {
         return;
       }
       const data = { state: StateOnOff.OFF };
-      this.logger.info(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      if (action.logger === 'info')
+        this.logger.info(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      else if (action.logger === 'warn')
+        this.logger.warn(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      else if (action.logger === 'error')
+        this.logger.error(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+      else
+        this.logger.debug(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+
       this.mqtt.onMessage(`${this.mqttBaseTopic}/${entity.name}/set`, Buffer.from(this.payloadStringify(data)));
     }, action.turn_off_after! * 1000);
     timeout.unref();
