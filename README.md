@@ -52,7 +52,7 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
     weekday?:
   action: 
     entity:               ## Name of the entity to send the payload to
-    payload:              ## Values: turn_on turn_off toggle or any supported attributes in an object or indented on the next rows (example: state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 })
+    payload:              ## Values: turn_on turn_off toggle or any supported attributes in an object or indented on the next rows (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
     logger?:              ## Values: debug info warn error Default: debug
     turn_off_after?:      ## Number: seconds to wait before turning off entity
 ```

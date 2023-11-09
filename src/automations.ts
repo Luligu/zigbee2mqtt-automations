@@ -554,7 +554,7 @@ class AutomationsExtension {
       return result;
     } catch (error) {
       this.logger.warning(error as string);
-      this.logger.error(`[Automations] Condition check [${automation.name}] TimeCondition parse error so ignoring condition`);
+      this.logger.error(`[Automations] Condition check for [${automation.name}] parse error: ignoring condition`);
       return true;
     }
   }
