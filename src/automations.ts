@@ -551,11 +551,10 @@ class AutomationsExtension {
       const now = new Date();
       const day = now.getDay();
       const result = current.isInRange(after, before) && weekday.includes(WEEK[day]);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is ${result}`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] time condition [${condition.before ? 'before:' + condition.before : ''} ${condition.after ? 'after:' + condition.after : ''} ${condition.weekday ? 'days:' + condition.weekday : ''}] is ${result}`);
       return result;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-      this.logger.warning(e);
+    } catch (error) {
+      this.logger.warning(error as string);
       this.logger.error(`[Automations] Condition check [${automation.name}] TimeCondition parse error so ignoring condition`);
       return true;
     }
