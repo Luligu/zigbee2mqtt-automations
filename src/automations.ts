@@ -150,7 +150,7 @@ type ConfigAutomations = {
   [key: string]: {
     execute_once?: ExecuteOnceType;
     active?: ActiveType,
-    trigger: ConfigTrigger,
+    trigger: ConfigTrigger | ConfigTrigger[],
     action: ConfigAction | ConfigAction[],
     condition?: ConfigCondition | ConfigCondition[],
   }
@@ -319,10 +319,10 @@ class AutomationsExtension {
         switch (trigger.platform) {
           case ConfigPlatform.TIME:
             this.logger.info(`[Automations] Registering time automation [${key}]`);
-            if (configAutomation.trigger.event) {
-              if (!this.timeAutomations[configAutomation.trigger.event])
-                this.timeAutomations[configAutomation.trigger.event] = [];
-              this.timeAutomations[configAutomation.trigger.event].push({ name: key, trigger: configAutomation.trigger, action: actions, condition: conditions });
+            if (trigger.event) {
+              if (!this.timeAutomations[trigger.event])
+                this.timeAutomations[trigger.event] = [];
+              this.timeAutomations[trigger.event].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
             } else {
               this.logger.error(`[Automations] Config validation error for [${key}]: trigger event not found`);
               return;
@@ -330,17 +330,17 @@ class AutomationsExtension {
             break;
           case ConfigPlatform.SUNCALC: {
             this.logger.info(`[Automations] Registering suncalc automation [${key}]`);
-            const times = SunCalc.getTimes(new Date(), configAutomation.trigger.latitude, configAutomation.trigger.longitude);
-            this.logger.debug(`[Automations] Sunrise at ${times.sunrise.toLocaleTimeString()} sunset at ${times.sunset.toLocaleTimeString()} for latitude:${configAutomation.trigger.latitude} longitude:${configAutomation.trigger.longitude}`);
-            if (configAutomation.trigger.event === ConfigTimeTrigger.SUNRISE) {
+            const times = SunCalc.getTimes(new Date(), trigger.latitude, trigger.longitude);
+            this.logger.debug(`[Automations] Sunrise at ${times.sunrise.toLocaleTimeString()} sunset at ${times.sunset.toLocaleTimeString()} for latitude:${trigger.latitude} longitude:${trigger.longitude}`);
+            if (trigger.event === ConfigTimeTrigger.SUNRISE) {
               if (!this.timeAutomations[times.sunrise.toLocaleTimeString()])
                 this.timeAutomations[times.sunrise.toLocaleTimeString()] = [];
-              this.timeAutomations[times.sunrise.toLocaleTimeString()].push({ name: key, trigger: configAutomation.trigger, action: actions, condition: conditions });
+              this.timeAutomations[times.sunrise.toLocaleTimeString()].push({ name: key, trigger: trigger, action: actions, condition: conditions });
             }
-            if (configAutomation.trigger.event === ConfigTimeTrigger.SUNSET) {
+            if (trigger.event === ConfigTimeTrigger.SUNSET) {
               if (!this.timeAutomations[times.sunset.toLocaleTimeString()])
                 this.timeAutomations[times.sunset.toLocaleTimeString()] = [];
-              this.timeAutomations[times.sunset.toLocaleTimeString()].push({ name: key, execute_once: configAutomation.execute_once, trigger: configAutomation.trigger, action: actions, condition: conditions });
+              this.timeAutomations[times.sunset.toLocaleTimeString()].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
             }
             break;
           }
@@ -420,7 +420,6 @@ class AutomationsExtension {
           this.logger.debug(`[Automations] Timout for [${automation.name}]`);
           this.runActionsWithConditions(automation, automation.condition, automation.action);
         }, timeEvent.getTime() - now.getTime());
-
         timeout.unref();
         this.triggerForTimeouts[automation.name] = timeout;
       }
@@ -637,12 +636,24 @@ class AutomationsExtension {
           data = action.data as ConfigActionData;
           break;
       }
-      let payload: ConfigActionPayload;
       if (action.payload) {
-        payload = action.payload as ConfigActionPayload;
-        data = payload;
+        this.log.error('Payload:', typeof action.payload, action.payload)
+        if (typeof action.payload === 'string') {
+          if (action.payload === ConfigService.TURN_ON) {
+            data = { state: StateOnOff.ON };
+          } else if (action.payload === ConfigService.TURN_OFF) {
+            data = { state: StateOnOff.OFF };
+          } else if (action.payload === ConfigService.TOGGLE) {
+            data = { state: StateOnOff.TOGGLE };
+          } else {
+            this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
+          }
+        } else if (typeof action.payload === 'object') {
+          data = action.payload;
+        } else {
+          this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
+        }
       }
-      //this.logger.info(`[Automations] Run automation [${automation.name}] send ${stringify(data)} to entity #${action.entity}# `);
       if (action.logger === 'info')
         this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
       else if (action.logger === 'warn')
@@ -655,21 +666,38 @@ class AutomationsExtension {
       if (action.turn_off_after) {
         this.startActionTimeout(automation, action);
       }
-      this.log.warning(`Uregistered automation [${automation.name}]`, automation);
-      if (automation.execute_once === true) {
-        Object.keys(this.eventAutomations).forEach((entity) => {
-          Object.values(this.eventAutomations[entity]).forEach((eventAutomation, index) => {
-            if (eventAutomation.name === automation.name) {
-              this.log.warning(`Entity: #${entity}# ${index} automation: ${eventAutomation.name}`);
-              this.eventAutomations[entity].splice(index, 1);
-            }
-            else {
-              this.log.info(`Entity: #${entity}# automation: ${eventAutomation.name}`);
-            }
-          });
-        });
-      }
+    } // End for (const action of actions)
+    if (automation.execute_once === true) {
+      this.removeAutomation(automation.name);
     }
+  }
+
+  private removeAutomation(name: string): void {
+    this.log.warning(`Uregistering automation [${name}]`);
+    Object.keys(this.eventAutomations).forEach((entity) => {
+      this.log.warning(`Entity: #${entity}#`);
+      Object.values(this.eventAutomations[entity]).forEach((eventAutomation, index) => {
+        if (eventAutomation.name === name) {
+          this.log.warning(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
+          this.eventAutomations[entity].splice(index, 1);
+        }
+        else {
+          this.log.info(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
+        }
+      });
+    });
+    Object.keys(this.timeAutomations).forEach((now) => {
+      this.log.warning(`Time: #${now}#`);
+      Object.values(this.timeAutomations[now]).forEach((timeAutomation, index) => {
+        if (timeAutomation.name === name) {
+          this.log.warning(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
+          this.timeAutomations[now].splice(index, 1);
+        }
+        else {
+          this.log.info(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
+        }
+      });
+    });
   }
 
   private stopActionTimeout(automation: EventAutomation, action: ConfigAction): void {
