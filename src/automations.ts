@@ -68,6 +68,7 @@ const WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const TIME_STRING_REGEXP = /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/;
 
 type ConfigStateType = string | number | boolean;
+type ConfigPayloadType = string | number | boolean;
 type ConfigActionType = string;
 type ConfigAttributeType = string;
 
@@ -78,76 +79,10 @@ type StateChangeTo = Record<string, StateChangeType>;
 
 type TriggerForType = number;
 type TurnOffAfterType = number;
+type ExecuteOnceType = boolean;
+type ActiveType = boolean;
 type TimeStringType = string; // e.g. "15:05:00"
 type LoggerType = string;
-
-class Time {
-  private readonly h: number;
-  private readonly m: number;
-  private readonly s: number;
-
-  constructor(time?: TimeStringType) {
-    if (!time) {
-      const now = new Date();
-      this.h = now.getHours();
-      this.m = now.getMinutes();
-      this.s = now.getSeconds();
-    } else if (!TIME_STRING_REGEXP.test(time)) {
-      throw new Error(`Wrong time string: ${time}`);
-    } else {
-      [this.h, this.m, this.s] = time.split(':').map(Number);
-    }
-  }
-
-  isEqual(time: Time): boolean {
-    return this.h === time.h
-      && this.m === time.m
-      && this.s === time.s;
-  }
-
-  isGreater(time: Time): boolean {
-    if (this.h > time.h) {
-      return true;
-    }
-    if (this.h < time.h) {
-      return false;
-    }
-    if (this.m > time.m) {
-      return true;
-    }
-    if (this.m < time.m) {
-      return false;
-    }
-    return this.s > time.s;
-  }
-
-  isLess(time: Time) {
-    return !this.isGreater(time) && !this.isEqual(time);
-  }
-
-  isInRange(after: Time, before: Time): boolean {
-    if (before.isEqual(after)) {
-      return false;
-    }
-
-    // Граничные значения считаем всегда подходящими
-    if (this.isEqual(before) || this.isEqual(after)) {
-      return true;
-    }
-
-    let inverse = false;
-    // Если интервал переходит через 00:00, инвертируем его
-    if (after.isGreater(before)) {
-      const tmp = after;
-      after = before;
-      before = tmp;
-      inverse = true;
-    }
-
-    const result = this.isGreater(after) && this.isLess(before);
-    return inverse ? !result : result;
-  }
-}
 
 interface ConfigTrigger {
   platform: ConfigPlatform;
@@ -174,7 +109,7 @@ interface ConfigNumericStateTrigger extends ConfigTrigger {
 }
 
 type ConfigActionData = Record<ConfigAttributeType, ConfigStateType>;
-type ConfigActionPayload = Record<ConfigAttributeType, ConfigStateType>;
+type ConfigActionPayload = Record<ConfigAttributeType, ConfigPayloadType>;
 
 interface ConfigAction {
   entity: EntityId;
@@ -213,7 +148,8 @@ interface ConfigTimeCondition extends ConfigCondition {
 // Yaml defined automations
 type ConfigAutomations = {
   [key: string]: {
-    active?: boolean,
+    execute_once?: ExecuteOnceType;
+    active?: ActiveType,
     trigger: ConfigTrigger,
     action: ConfigAction | ConfigAction[],
     condition?: ConfigCondition | ConfigCondition[],
@@ -223,9 +159,10 @@ type ConfigAutomations = {
 // Internal event based automations
 type EventAutomation = {
   name: string,
+  execute_once?: ExecuteOnceType;
   trigger: ConfigTrigger,
-  action: ConfigAction[],
   condition: ConfigCondition[],
+  action: ConfigAction[],
 };
 
 type EntityId = string;
@@ -237,6 +174,7 @@ type EventAutomations = {
 // Internal time based automations
 type TimeAutomation = {
   name: string,
+  execute_once?: ExecuteOnceType;
   trigger: ConfigTrigger,
   condition: ConfigCondition[],
   action: ConfigAction[],
@@ -313,30 +251,6 @@ class AutomationsExtension {
     });
 
     this.startMidnightTimeout();
-  }
-
-  /**
-   * Start a timeout in the first second of tomorrow date.
-   * The timeout callback then will start the time triggers for tomorrow and start again a timeout for the next day.
-   */
-  private startMidnightTimeout(): void {
-    const now = new Date();
-    const timeEvent = new Date();
-    timeEvent.setHours(23);
-    timeEvent.setMinutes(59);
-    timeEvent.setSeconds(59);
-    this.logger.debug(`[Automations] Set timeout for automations reloading at ${timeEvent.toLocaleString()}`);
-    this.midnightTimeout = setTimeout(() => {
-      this.logger.info(`[Automations] Timeout for automations reloading executing`);
-      Object.keys(this.timeAutomations).forEach(key => {
-        const timeAutomationArray = this.timeAutomations[key];
-        timeAutomationArray.forEach(timeAutomation => {
-          this.startTimeTriggers(key, timeAutomation);
-        });
-      });
-      this.startMidnightTimeout();
-    }, timeEvent.getTime() - now.getTime() + 2000);
-    this.midnightTimeout.unref();
   }
 
   private parseConfig(configAutomations: ConfigAutomations | string) {
@@ -426,7 +340,7 @@ class AutomationsExtension {
             if (configAutomation.trigger.event === ConfigTimeTrigger.SUNSET) {
               if (!this.timeAutomations[times.sunset.toLocaleTimeString()])
                 this.timeAutomations[times.sunset.toLocaleTimeString()] = [];
-              this.timeAutomations[times.sunset.toLocaleTimeString()].push({ name: key, trigger: configAutomation.trigger, action: actions, condition: conditions });
+              this.timeAutomations[times.sunset.toLocaleTimeString()].push({ name: key, execute_once: configAutomation.execute_once, trigger: configAutomation.trigger, action: actions, condition: conditions });
             }
             break;
           }
@@ -447,7 +361,7 @@ class AutomationsExtension {
               if (!this.eventAutomations[entityId]) {
                 this.eventAutomations[entityId] = [];
               }
-              this.eventAutomations[entityId].push({ name: key, trigger: trigger, action: actions, condition: conditions });
+              this.eventAutomations[entityId].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
             }
             //this.logger.info(`[Automations] Registered event automation [${key}] platform ${trigger.platform} entity ${trigger.entity}`);
             break;
@@ -457,6 +371,30 @@ class AutomationsExtension {
         } // switch
       }
     });
+  }
+
+  /**
+   * Start a timeout in the first second of tomorrow date.
+   * The timeout callback then will start the time triggers for tomorrow and start again a timeout for the next day.
+   */
+  private startMidnightTimeout(): void {
+    const now = new Date();
+    const timeEvent = new Date();
+    timeEvent.setHours(23);
+    timeEvent.setMinutes(59);
+    timeEvent.setSeconds(59);
+    this.logger.debug(`[Automations] Set timeout for automations reloading at ${timeEvent.toLocaleString()}`);
+    this.midnightTimeout = setTimeout(() => {
+      this.logger.info(`[Automations] Timeout for automations reloading executing`);
+      Object.keys(this.timeAutomations).forEach(key => {
+        const timeAutomationArray = this.timeAutomations[key];
+        timeAutomationArray.forEach(timeAutomation => {
+          this.startTimeTriggers(key, timeAutomation);
+        });
+      });
+      this.startMidnightTimeout();
+    }, timeEvent.getTime() - now.getTime() + 2000);
+    this.midnightTimeout.unref();
   }
 
   /**
@@ -718,6 +656,20 @@ class AutomationsExtension {
       if (action.turn_off_after) {
         this.startActionTimeout(automation, action);
       }
+      this.log.warning(`Uregistered automation [${automation.name}]`, automation);
+      if (automation.execute_once === true) {
+        Object.keys(this.eventAutomations).forEach((entity) => {
+          Object.values(this.eventAutomations[entity]).forEach((eventAutomation, index) => {
+            if (eventAutomation.name === automation.name) {
+              this.log.warning(`Entity: #${entity}# ${index} automation: ${eventAutomation.name}`);
+              this.eventAutomations[entity].splice(index, 1);
+            }
+            else {
+              this.log.info(`Entity: #${entity}# automation: ${eventAutomation.name}`);
+            }
+          });
+        });
+      }
     }
   }
 
@@ -898,4 +850,71 @@ class AutomationsExtension {
   }
 }
 
+class Time {
+  private readonly h: number;
+  private readonly m: number;
+  private readonly s: number;
+
+  constructor(time?: TimeStringType) {
+    if (!time) {
+      const now = new Date();
+      this.h = now.getHours();
+      this.m = now.getMinutes();
+      this.s = now.getSeconds();
+    } else if (!TIME_STRING_REGEXP.test(time)) {
+      throw new Error(`Wrong time string: ${time}`);
+    } else {
+      [this.h, this.m, this.s] = time.split(':').map(Number);
+    }
+  }
+
+  isEqual(time: Time): boolean {
+    return this.h === time.h
+      && this.m === time.m
+      && this.s === time.s;
+  }
+
+  isGreater(time: Time): boolean {
+    if (this.h > time.h) {
+      return true;
+    }
+    if (this.h < time.h) {
+      return false;
+    }
+    if (this.m > time.m) {
+      return true;
+    }
+    if (this.m < time.m) {
+      return false;
+    }
+    return this.s > time.s;
+  }
+
+  isLess(time: Time) {
+    return !this.isGreater(time) && !this.isEqual(time);
+  }
+
+  isInRange(after: Time, before: Time): boolean {
+    if (before.isEqual(after)) {
+      return false;
+    }
+
+    // Граничные значения считаем всегда подходящими
+    if (this.isEqual(before) || this.isEqual(after)) {
+      return true;
+    }
+
+    let inverse = false;
+    // Если интервал переходит через 00:00, инвертируем его
+    if (after.isGreater(before)) {
+      const tmp = after;
+      after = before;
+      before = tmp;
+      inverse = true;
+    }
+
+    const result = this.isGreater(after) && this.isLess(before);
+    return inverse ? !result : result;
+  }
+}
 export = AutomationsExtension;
