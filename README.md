@@ -44,7 +44,7 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
     entity:               ## Name of the entity (device or group friendly name)
     state?:               ## Values: ON OFF 
     attribute?:           ## Name of the attribute (example: state, brightness, illuminance_lux)
-    equal?:               ## Numeric value of attribute to evaluate
+    equal?:               ## Value of the attribute to evaluate
     above?:               ## Numeric value of attribute to evaluate
     below?:               ## Numeric value of attribute to evaluate
     after?:               ## Time string hh:mm:ss
@@ -62,11 +62,18 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
 # condition examples:
 ```
   condition:
-    - after: 08:30:00
-    - before: 22:30:00
-    - weekday: ['mon', 'tue', 'fri']
+    after: 08:30:00
+    before: 22:30:00
+    weekday: ['mon', 'tue', 'fri']
 ```
 The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
+
+```
+  condition:
+    entity: At home
+    state: ON
+```
+The automation is run only if 'At home' is ON
 
 # action examples:
 ```
