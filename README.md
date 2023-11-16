@@ -75,6 +75,16 @@ The automation is run only on monday, tuesday and friday and only after 08:30 an
 ```
 The automation is run only if 'At home' is ON
 
+```
+  condition:
+    - entity: At home
+      state: ON
+    - entity: Is night
+      state: OFF
+```
+The automation is run only if 'At home' is ON and 'Is night' is OFF.
+For multiple entity conditions entity must be indented
+
 # action examples:
 ```
   action:
