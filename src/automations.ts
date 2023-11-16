@@ -220,7 +220,7 @@ class AutomationsExtension {
     this.mqttBaseTopic = settings.get().mqtt.base_topic;
     this.triggerForTimeouts = {};
     this.turnOffAfterTimeouts = {};
-    //this.midnightTimeout;
+
     this.parseConfig(settings.get().automations || {});
 
     this.logger.info(`[Automations] Extension loaded`);
@@ -377,9 +377,9 @@ class AutomationsExtension {
     timeEvent.setHours(23);
     timeEvent.setMinutes(59);
     timeEvent.setSeconds(59);
-    this.logger.debug(`[Automations] Set timeout for automations reloading at ${timeEvent.toLocaleString()}`);
+    this.logger.debug(`[Automations] Set timeout for time automations reloading`);
     this.midnightTimeout = setTimeout(() => {
-      this.logger.info(`[Automations] Timeout for automations reloading executing`);
+      this.logger.info(`[Automations] Run timeout for automations reloading`);
       Object.keys(this.timeAutomations).forEach(key => {
         const timeAutomationArray = this.timeAutomations[key];
         timeAutomationArray.forEach(timeAutomation => {
@@ -519,18 +519,21 @@ class AutomationsExtension {
 
   private checkCondition(automation: EventAutomation, condition: ConfigCondition): boolean {
     this.logger.debug(`[Automations] Condition check [${automation.name}]`);
+    let timeResult = true;
+    let eventResult = true;
 
     if ((condition as ConfigTimeCondition).after || (condition as ConfigTimeCondition).before || (condition as ConfigTimeCondition).weekday) {
       this.log.warning(`checkCondition: time conditon: ${this.stringify(condition)}`);
-      this.checkTimeCondition(automation, condition as ConfigTimeCondition);
+      timeResult = this.checkTimeCondition(automation, condition as ConfigTimeCondition);
     }
     if ((condition as ConfigEntityCondition).entity) {
       this.log.warning(`checkCondition: entity conditon: ${this.stringify(condition)}`);
-      return this.checkEntityCondition(automation, condition as ConfigEntityCondition);
+      eventResult = this.checkEntityCondition(automation, condition as ConfigEntityCondition);
     }
-    return true;
+    return (timeResult && eventResult);
   }
 
+  // Return false if condition is false
   private checkTimeCondition(automation: EventAutomation, condition: ConfigTimeCondition): boolean {
     this.log.warning(`checkTimeCondition: conditon: ${this.stringify(condition)}`);
 
@@ -574,10 +577,11 @@ class AutomationsExtension {
       }
     }
     this.log.warning(`checkTimeCondition: conditon: ${this.stringify(condition)} is true`);
-    this.logger.debug(`[Automations] Time condition is true for [${automation.name}]`);
+    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition ${this.stringify(condition)} is true`);
     return true;
   }
 
+  // Return false if condition is false
   private checkEntityCondition(automation: EventAutomation, condition: ConfigEntityCondition): boolean {
     this.log.warning(`checkEntityCondition: conditon: ${this.stringify(condition)}`);
     if (!condition.entity) {
@@ -594,27 +598,27 @@ class AutomationsExtension {
     const value = this.state.get(entity)[attribute];
     if (condition.state !== undefined && value !== condition.state) {
       this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not '${condition.state}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.equal !== undefined && value !== condition.equal) {
       this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not equal '${condition.equal}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.below !== undefined && value >= condition.below) {
       this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below ${condition.below}`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below ${condition.below}`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below '${condition.below}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.above !== undefined && value <= condition.above) {
       this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above ${condition.above}`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above ${condition.above}`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above '${condition.above}'`);
       return false;
     }
 
     this.log.warning(`checkEntityCondition: conditon: ${this.stringify(condition)} is true`);
-    this.logger.debug(`[Automations] Condition check [${automation.name}] condition true for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
+    this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is true for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
     return true;
   }
 
