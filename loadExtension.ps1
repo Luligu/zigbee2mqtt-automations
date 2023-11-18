@@ -3,7 +3,7 @@ $jsFilePath = ".\dist\automations.js"
 $jsonFilePath = ".\dist\__temp__automations.js"
 
 # Read the content of the JS file, escape double quotes and replace newlines with \n
-$jsContent = (Get-Content -Path $jsFilePath -Raw) -replace '\\', '\\' -replace '"', '\"' -replace "`r`n", '\r\n' -replace "`n", '\n' -replace "`t", '\t' 
+$jsContent = (Get-Content -Path $jsFilePath -Raw) -replace '\\', '\\' -replace '"', '\"' -replace "`n", '\n'
 
 # Define the complete JSON payload with the JS content
 $jsonPayload = '{"name": "automations.js", "code": "' + $jsContent + '", "transaction": "Luligu"}'
