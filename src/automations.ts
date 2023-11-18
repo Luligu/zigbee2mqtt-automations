@@ -38,13 +38,6 @@ function toArray<T>(item: T | T[]): T[] {
   return Array.isArray(item) ? item : [item];
 }
 
-enum ConfigPlatform {
-  ACTION = 'action',
-  STATE = 'state',
-  NUMERIC_STATE = 'numeric_state',
-  TIME = 'time',
-}
-
 enum ConfigSunCalc {
   SOLAR_NOON = 'solarNoon',
   NADIR = 'nadir',
@@ -74,13 +67,11 @@ enum ConfigPayload {
   TURN_OFF = 'turn_off',
 }
 
-//const WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-//const TIME_STRING_REGEXP = /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/;
-
-type ConfigStateType = string | number | boolean;
+type ConfigStateType = string;
 type ConfigPayloadType = string | number | boolean;
 type ConfigActionType = string;
 type ConfigAttributeType = string;
+type ConfigAttributeValueType = string | number | boolean;
 
 type StateChangeType = string | number | boolean;
 type StateChangeUpdate = Record<string, StateChangeType>;
@@ -95,10 +86,8 @@ type TimeStringType = string; // e.g. "15:05:00"
 type LoggerType = string;
 
 interface ConfigTrigger {
-  platform: ConfigPlatform;
   entity: EntityId | EntityId[];
-  for?: TriggerForType;
-  time?: TimeStringType;
+  time: TimeStringType;
 }
 
 interface ConfigTimeTrigger extends ConfigTrigger {
@@ -108,22 +97,34 @@ interface ConfigTimeTrigger extends ConfigTrigger {
   elevation?: number;
 }
 
-interface ConfigActionTrigger extends ConfigTrigger {
-  action: ConfigActionType | ConfigActionType[];
-}
-
-interface ConfigStateTrigger extends ConfigTrigger {
+interface ConfigEventTrigger extends ConfigTrigger {
+  entity: EntityId | EntityId[];
+  for?: TriggerForType;
+  action?: ConfigActionType | ConfigActionType[];
+  state?: ConfigStateType | ConfigStateType[];
   attribute?: ConfigAttributeType;
-  state: ConfigStateType | ConfigStateType[];
-}
-
-interface ConfigNumericStateTrigger extends ConfigTrigger {
-  attribute: ConfigAttributeType;
+  equal?: ConfigAttributeValueType;
+  not_equal?: ConfigAttributeValueType;
   above?: number;
   below?: number;
 }
 
-type ConfigActionData = Record<ConfigAttributeType, ConfigStateType>;
+interface ConfigActionTrigger extends ConfigEventTrigger {
+  action: ConfigActionType | ConfigActionType[];
+}
+
+interface ConfigStateTrigger extends ConfigEventTrigger {
+  state: ConfigStateType | ConfigStateType[];
+}
+
+interface ConfigAttributeTrigger extends ConfigEventTrigger {
+  attribute: ConfigAttributeType;
+  equal?: ConfigAttributeValueType;
+  not_equal?: ConfigAttributeValueType;
+  above?: number;
+  below?: number;
+}
+
 type ConfigActionPayload = Record<ConfigAttributeType, ConfigPayloadType>;
 
 interface ConfigAction {
@@ -134,14 +135,14 @@ interface ConfigAction {
 }
 
 interface ConfigCondition {
-  //platform: ConfigPlatform;
 }
 
 interface ConfigEntityCondition extends ConfigCondition {
   entity: EntityId;
   state?: ConfigStateType;
   attribute?: ConfigAttributeType;
-  equal?: string | number | boolean;
+  equal?: ConfigAttributeValueType;
+  not_equal?: ConfigAttributeValueType;
   above?: number;
   below?: number;
 }
@@ -167,7 +168,7 @@ type ConfigAutomations = {
 type EventAutomation = {
   name: string,
   execute_once?: ExecuteOnceType;
-  trigger: ConfigTrigger,
+  trigger: ConfigEventTrigger,
   condition: ConfigCondition[],
   action: ConfigAction[],
 };
@@ -182,7 +183,7 @@ type EventAutomations = {
 type TimeAutomation = {
   name: string,
   execute_once?: ExecuteOnceType;
-  trigger: ConfigTrigger,
+  trigger: ConfigTimeTrigger,
   condition: ConfigCondition[],
   action: ConfigAction[],
 };
@@ -240,6 +241,7 @@ class AutomationsExtension {
 
     this.logger.info(`[Automations] Extension loaded`);
 
+    /*
     this.log.info(`Event automation:`);
     Object.keys(this.eventAutomations).forEach(key => {
       const eventAutomationArray = this.eventAutomations[key];
@@ -247,12 +249,12 @@ class AutomationsExtension {
         this.log.info(`- key: #${key}# automation: ${this.stringify(eventAutomation, true)}`);
       });
     });
-
-    this.log.info(`Time automation:`);
+    */
+    //this.log.info(`Time automation:`);
     Object.keys(this.timeAutomations).forEach(key => {
       const timeAutomationArray = this.timeAutomations[key];
       timeAutomationArray.forEach(timeAutomation => {
-        this.log.info(`- key: #${key}# automation: ${this.stringify(timeAutomation, true)}`);
+        //this.log.info(`- key: #${key}# automation: ${this.stringify(timeAutomation, true)}`);
         this.startTimeTriggers(key, timeAutomation);
       });
     });
@@ -265,77 +267,79 @@ class AutomationsExtension {
       configAutomations = (yaml.readIfExists(data.joinPath(configAutomations)) || {}) as ConfigAutomations;
     }
 
-    //const services = Object.values(ConfigService);
-    const platforms = Object.values(ConfigPlatform);
-
     Object.entries(configAutomations).forEach(([key, configAutomation]) => {
-      const conditions = configAutomation.condition ? toArray(configAutomation.condition) : [];
       const actions = toArray(configAutomation.action);
+      const conditions = configAutomation.condition ? toArray(configAutomation.condition) : [];
       const triggers = toArray(configAutomation.trigger);
 
-      //this.log.debug(`Entries Start`, key);
+      // Check automation
       if (configAutomation.active === false) {
         this.logger.info(`[Automations] Automation [${key}] not registered since active is false`);
         return;
       }
       if (!configAutomation.trigger) {
-        this.logger.error(`[Automations] Config validation error for [${key}]: trigger not specified`);
+        this.logger.error(`[Automations] Config validation error for [${key}]: no triggers defined`);
         return;
       }
       if (!configAutomation.action) {
-        this.logger.error(`[Automations] Config validation error for [${key}]: no actions specified`);
+        this.logger.error(`[Automations] Config validation error for [${key}]: no actions defined`);
         return;
       }
       // Check triggers
-      //this.log.debug(`Entries Check triggers`, key);
       for (const trigger of triggers) {
-        //this.log.debug(`Entries Check triggers 2`, key, trigger, trigger.platform);
-        if (!platforms.includes(trigger.platform) && !trigger.time) {
-          this.logger.error(`[Automations] Config validation error for [${key}]: unknown trigger platform '${trigger.platform}'`);
+        if (!trigger.time && !trigger.entity) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity not defined`);
           return;
         }
-        //this.log.debug(`Entries Check triggers 3`, key, trigger, trigger.entity);
-        if (trigger.entity !== undefined && !this.zigbee.resolveEntity(trigger.entity)) {
+        if (!trigger.time && !this.zigbee.resolveEntity(trigger.entity)) {
           this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity #${trigger.entity}# not found`);
           return;
         }
       }
       // Check actions
-      //this.log.debug(`Entries Check actions`, key);
       for (const action of actions) {
-        if (action.payload === undefined) {
-          this.logger.error(`[Automations] Config validation error for [${key}]: payload not defined`);
+        if (!action.entity) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: action entity not defined`);
           return;
         }
         if (!this.zigbee.resolveEntity(action.entity)) {
           this.logger.error(`[Automations] Config validation error for [${key}]: action entity #${action.entity}# not found`);
           return;
         }
-      }
-      // Check conditions
-      //this.log.debug(`Entries Check conditions`, key);
-      /*
-      for (const condition of conditions) {
-        if (!platforms.includes(condition.platform)) {
-          this.logger.error(`[Automations] Config validation error for [${key}]: unknown condition platform '${condition.platform}'`);
+        if (!action.payload) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: action payload not defined`);
           return;
         }
       }
-      */
+      // Check conditions
+      for (const condition of conditions) {
+        if (!(condition as ConfigEntityCondition).entity && !(condition as ConfigTimeCondition).after && !(condition as ConfigTimeCondition).before && !(condition as ConfigTimeCondition).weekday) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: condition unknown`);
+          return;
+        }
+        if ((condition as ConfigEntityCondition).entity && !this.zigbee.resolveEntity((condition as ConfigEntityCondition).entity)) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: condition entity #${(condition as ConfigEntityCondition).entity}# not found`);
+          return;
+        }
+      }
 
       for (const trigger of triggers) {
-        if (trigger.time) {
+        if (trigger.time !== undefined) {
           const timeTrigger = trigger as ConfigTimeTrigger;
           this.logger.info(`[Automations] Registering time automation [${key}] trigger: ${timeTrigger.time}`);
           const suncalcs = Object.values(ConfigSunCalc);
           if (suncalcs.includes(timeTrigger.time as ConfigSunCalc)) {
+            if (!timeTrigger.latitude || !timeTrigger.longitude) {
+              this.logger.error(`[Automations] Config validation error for [${key}]: latitude and longitude are mandatory for ${trigger.time}`);
+              return;
+            }
             const times = SunCalc.getTimes(new Date(), timeTrigger.latitude, timeTrigger.longitude, timeTrigger.elevation ? timeTrigger.elevation : 0) as object;
             this.logger.debug(`[Automations] Sunrise at ${times[ConfigSunCalc.SUNRISE].toLocaleTimeString()} sunset at ${times[ConfigSunCalc.SUNSET].toLocaleTimeString()} for latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0}`);
             this.log.debug(`[Automations] For latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0} suncalc are:\n`, times);
             const time = times[trigger.time].toLocaleTimeString();
             if (!this.timeAutomations[time])
               this.timeAutomations[time] = [];
-            this.timeAutomations[time].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
+            this.timeAutomations[time].push({ name: key, execute_once: configAutomation.execute_once, trigger: timeTrigger, action: actions, condition: conditions });
           }
           else if (this.matchTimeString(timeTrigger.time)) {
             if (!this.timeAutomations[timeTrigger.time])
@@ -343,44 +347,38 @@ class AutomationsExtension {
             this.timeAutomations[timeTrigger.time].push({ name: key, execute_once: configAutomation.execute_once, trigger: timeTrigger, action: actions, condition: conditions });
           }
           else {
-            this.logger.error(`[Automations] Config validation error for [${key}]: time syntax error '${trigger.time}'`);
+            this.logger.error(`[Automations] Config validation error for [${key}]: time syntax error for ${trigger.time}`);
             return;
           }
         }
-        switch (trigger.platform) {
-          case ConfigPlatform.ACTION:
-          case ConfigPlatform.NUMERIC_STATE:
-          case ConfigPlatform.STATE: {
-            this.logger.info(`[Automations] Registering event automation [${key}] platform ${trigger.platform} entity ${trigger.entity}`);
-            if (!trigger.entity) {
-              this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity not specified`);
-              return;
-            }
-            if (!this.zigbee.resolveEntity(trigger.entity)) {
-              this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity #${trigger.entity}# not found`);
-              return;
-            }
-            const entities = toArray(trigger.entity);
-            for (const entityId of entities) {
-              if (!this.eventAutomations[entityId]) {
-                this.eventAutomations[entityId] = [];
-              }
-              this.eventAutomations[entityId].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
-            }
-            //this.logger.info(`[Automations] Registered event automation [${key}] platform ${trigger.platform} entity ${trigger.entity}`);
-            break;
-          }
-          default:
+        if (trigger.entity !== undefined) {
+          const eventTrigger = trigger as ConfigEventTrigger;
+          if (!this.zigbee.resolveEntity(eventTrigger.entity)) {
+            this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity #${eventTrigger.entity}# not found`);
             return;
-        } // switch
-      }
+          }
+          this.logger.info(`[Automations] Registering event automation [${key}] trigger: entity #${eventTrigger.entity}#`);
+          const entities = toArray(eventTrigger.entity);
+          for (const entity of entities) {
+            if (!this.eventAutomations[entity]) {
+              this.eventAutomations[entity] = [];
+            }
+            this.eventAutomations[entity].push({ name: key, execute_once: configAutomation.execute_once, trigger: eventTrigger, action: actions, condition: conditions });
+          }
+        }
+      } // for (const trigger of triggers)
     });
   }
 
+  /**
+   * Check a time string and return a Date or undefined if error
+   */
   private matchTimeString(timeString: TimeStringType): Date | undefined {
+    if (timeString.length !== 8)
+      return undefined;
     const match = timeString.match(/(\d{2}):(\d{2}):(\d{2})/);
-    const time = new Date();
     if (match && parseInt(match[1], 10) <= 23 && parseInt(match[2], 10) <= 59 && parseInt(match[3], 10) <= 59) {
+      const time = new Date();
       time.setHours(parseInt(match[1], 10));
       time.setMinutes(parseInt(match[2], 10));
       time.setSeconds(parseInt(match[3], 10));
@@ -399,9 +397,9 @@ class AutomationsExtension {
     timeEvent.setHours(23);
     timeEvent.setMinutes(59);
     timeEvent.setSeconds(59);
-    this.logger.debug(`[Automations] Set timeout for time automations reloading`);
+    this.logger.debug(`[Automations] Set timeout to reload for time automations`);
     this.midnightTimeout = setTimeout(() => {
-      this.logger.info(`[Automations] Run timeout for automations reloading`);
+      this.logger.info(`[Automations] Run timeout to reload time automations`);
       Object.keys(this.timeAutomations).forEach(key => {
         const timeAutomationArray = this.timeAutomations[key];
         timeAutomationArray.forEach(timeAutomation => {
@@ -420,19 +418,13 @@ class AutomationsExtension {
    */
   private startTimeTriggers(key: TimeId, automation: TimeAutomation): void {
     const now = new Date();
-    const timeEvent = new Date();
-    const match = key.match(/(\d{2}):(\d{2}):(\d{2})/);
-    if (match) {
-      timeEvent.setHours(parseInt(match[1], 10));
-      timeEvent.setMinutes(parseInt(match[2], 10));
-      timeEvent.setSeconds(parseInt(match[3], 10));
-      if (timeEvent.getTime() > now.getTime()) {
-        //this.log.debug(`Set timout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
-        this.logger.debug(`[Automations] Set timout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
 
+    const timeEvent = this.matchTimeString(key);
+    if (timeEvent !== undefined) {
+      if (timeEvent.getTime() > now.getTime()) {
+        this.logger.debug(`[Automations] Set timout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
         const timeout = setTimeout(() => {
           delete this.triggerForTimeouts[automation.name];
-          //this.log.debug(`Timout for [${automation.name}]`);
           this.logger.debug(`[Automations] Timout for [${automation.name}]`);
           this.runActionsWithConditions(automation, automation.condition, automation.action);
         }, timeEvent.getTime() - now.getTime());
@@ -440,11 +432,9 @@ class AutomationsExtension {
         this.triggerForTimeouts[automation.name] = timeout;
       }
       else {
-        //this.log.debug(`Timout at ${timeEvent.toLocaleString()} is passed for [${automation.name}]`);
         this.logger.debug(`[Automations] Timout at ${timeEvent.toLocaleString()} is passed for [${automation.name}]`);
       }
     } else {
-      //this.log.error(`Timout config error at ${key} for [${automation.name}]`);
       this.logger.error(`[Automations] Timout config error at ${key} for [${automation.name}]`);
     }
   }
@@ -454,102 +444,114 @@ class AutomationsExtension {
    * false - return and stop timer
    * true - start the automation
    */
-  private checkTrigger(automation: EventAutomation, configTrigger: ConfigTrigger, update: StateChangeUpdate, from: StateChangeFrom, to: StateChangeTo): boolean | null {
+  private checkTrigger(automation: EventAutomation, configTrigger: ConfigEventTrigger, update: StateChangeUpdate, from: StateChangeFrom, to: StateChangeTo): boolean | null {
     let trigger;
     let attribute;
     let result;
     let actions;
-    let states;
 
-    //this.logger.debug(`[Automations] Trigger check [${automation.name}]`);
+    //this.log.warning(`[Automations] Trigger check [${automation.name}] update: ${this.stringify(update)} from: ${this.stringify(from)} to: ${this.stringify(to)}`);
 
-    switch (configTrigger.platform) {
-      case ConfigPlatform.ACTION:
-        if (!Object.prototype.hasOwnProperty.call(update, 'action')) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no action in update for #${configTrigger.entity}#`);
+    if (configTrigger.action !== undefined) {
+      if (!Object.prototype.hasOwnProperty.call(update, 'action')) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] no 'action' in update for #${configTrigger.entity}#`);
+        return null;
+      }
+      trigger = configTrigger as ConfigActionTrigger;
+      actions = toArray(trigger.action);
+      result = actions.includes(update.action as ConfigActionType);
+      this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is ${result} for #${configTrigger.entity}# action(s): ${this.stringify(actions)}`);
+      return result;
+    } else if (configTrigger.attribute !== undefined) {
+      trigger = configTrigger as ConfigAttributeTrigger;
+      attribute = trigger.attribute;
+      if (!Object.prototype.hasOwnProperty.call(update, attribute) || !Object.prototype.hasOwnProperty.call(to, attribute)) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] no '${attribute}' published for #${configTrigger.entity}#`);
+        return null;
+      }
+      if (from[attribute] === to[attribute]) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] no '${attribute}' change for #${configTrigger.entity}#`);
+        return null;
+      }
+
+      if (typeof trigger.equal !== 'undefined' || typeof trigger.state !== 'undefined') {
+        const value = trigger.state !== undefined ? trigger.state : trigger.equal;
+        if (to[attribute] !== value) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' != ${value} for #${configTrigger.entity}#`);
+          return false;
+        }
+        if (from[attribute] === value) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' already = ${value} for #${configTrigger.entity}#`);
           return null;
         }
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger equal/state ${value} is true for #${configTrigger.entity}# ${attribute} is ${to[attribute]} `);
+      }
 
-        trigger = configTrigger as ConfigActionTrigger;
-        actions = toArray(trigger.action);
-        result = actions.includes(update.action as ConfigActionType);
-        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is ${result} for #${configTrigger.entity}# action:${this.stringify(actions)}`);
-        return result;
-
-      case ConfigPlatform.STATE:
-        trigger = configTrigger as ConfigStateTrigger;
-        attribute = trigger.attribute || 'state';
-
-        //this.log.warning(`Trigger check [${automation.name}]`, update, from, to);
-        if (!Object.prototype.hasOwnProperty.call(update, attribute) || /*!from.hasOwnProperty(attribute) ||*/ !Object.prototype.hasOwnProperty.call(to, attribute)) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} in update or to for #${configTrigger.entity}#`);
+      if (typeof trigger.not_equal !== 'undefined') {
+        if (to[attribute] === trigger.not_equal) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' = ${trigger.not_equal} for #${configTrigger.entity}#`);
+          return false;
+        }
+        if (from[attribute] !== trigger.not_equal) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' already != ${trigger.not_equal} for #${configTrigger.entity}#`);
           return null;
         }
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger not equal ${trigger.not_equal} is true for #${configTrigger.entity}# ${attribute} is ${to[attribute]} `);
+      }
 
-        if (from[attribute] === to[attribute]) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} change for #${configTrigger.entity}#`);
+      if (typeof trigger.above !== 'undefined') {
+        if (to[attribute] <= trigger.above) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' <= ${trigger.above} for #${configTrigger.entity}#`);
+          return false;
+        }
+        if (from[attribute] > trigger.above) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' already > ${trigger.above} for #${configTrigger.entity}#`);
           return null;
         }
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger above ${trigger.above} is true for #${configTrigger.entity}# ${attribute} is ${to[attribute]} `);
+      }
 
-        states = toArray(trigger.state);
-        result = states.includes(update[attribute] as ConfigStateType);
-        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is ${result} for #${configTrigger.entity}# state:${this.stringify(states)}`);
-        return result;
-
-      case ConfigPlatform.NUMERIC_STATE:
-        trigger = configTrigger as ConfigNumericStateTrigger;
-        attribute = trigger.attribute;
-
-        if (!Object.prototype.hasOwnProperty.call(update, attribute) || /*!from.hasOwnProperty(attribute) ||*/ !Object.prototype.hasOwnProperty.call(to, attribute)) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} in update or to for #${configTrigger.entity}#`);
+      if (typeof trigger.below !== 'undefined') {
+        if (to[attribute] >= trigger.below) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' >= ${trigger.below} for #${configTrigger.entity}#`);
+          return false;
+        }
+        if (from[attribute] < trigger.below) {
+          this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' already < ${trigger.below} for #${configTrigger.entity}#`);
           return null;
         }
-
-        if (from[attribute] === to[attribute]) {
-          this.logger.debug(`[Automations] Trigger check [${automation.name}] no ${attribute} change for #${configTrigger.entity}#`);
-          return null;
-        }
-
-        if (typeof trigger.above !== 'undefined') {
-          if (to[attribute] < trigger.above) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} < ${trigger.above} for #${configTrigger.entity}#`);
-            return false;
-          }
-          if (from[attribute] >= trigger.above) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} already triggered for #${configTrigger.entity}#`);
-            return null;
-          }
-        }
-
-        if (typeof trigger.below !== 'undefined') {
-          if (to[attribute] > trigger.below) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} > ${trigger.below} for #${configTrigger.entity}#`);
-            return false;
-          }
-          if (from[attribute] <= trigger.below) {
-            this.logger.debug(`[Automations] Trigger check [${automation.name}] ${attribute} already triggered for #${configTrigger.entity}#`);
-            return null;
-          }
-        }
-
-        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger is true for #${configTrigger.entity}# attribute: ${attribute}`);
-        return true;
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger below ${trigger.below} is true for #${configTrigger.entity}# ${attribute} is ${to[attribute]} `);
+      }
+      return true;
+    } else if (configTrigger.state !== undefined) {
+      trigger = configTrigger as ConfigStateTrigger;
+      attribute = 'state';
+      if (!Object.prototype.hasOwnProperty.call(update, attribute) || !Object.prototype.hasOwnProperty.call(to, attribute)) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] no '${attribute}' published for #${configTrigger.entity}#`);
+        return null;
+      }
+      if (from[attribute] === to[attribute]) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] no '${attribute}' change for #${configTrigger.entity}#`);
+        return null;
+      }
+      if (to[attribute] !== trigger.state) {
+        this.logger.debug(`[Automations] Trigger check [${automation.name}] '${attribute}' != ${trigger.state} for #${configTrigger.entity}#`);
+        return null;
+      }
+      this.logger.debug(`[Automations] Trigger check [${automation.name}] trigger state ${trigger.state} is true for #${configTrigger.entity}# state is ${to[attribute]}`);
+      return true;
     }
-
     return false;
   }
 
   private checkCondition(automation: EventAutomation, condition: ConfigCondition): boolean {
-    this.logger.debug(`[Automations] Condition check [${automation.name}]`);
     let timeResult = true;
     let eventResult = true;
 
     if ((condition as ConfigTimeCondition).after || (condition as ConfigTimeCondition).before || (condition as ConfigTimeCondition).weekday) {
-      this.log.warning(`checkCondition: time conditon: ${this.stringify(condition)}`);
       timeResult = this.checkTimeCondition(automation, condition as ConfigTimeCondition);
     }
     if ((condition as ConfigEntityCondition).entity) {
-      this.log.warning(`checkCondition: entity conditon: ${this.stringify(condition)}`);
       eventResult = this.checkEntityCondition(automation, condition as ConfigEntityCondition);
     }
     return (timeResult && eventResult);
@@ -557,25 +559,17 @@ class AutomationsExtension {
 
   // Return false if condition is false
   private checkTimeCondition(automation: EventAutomation, condition: ConfigTimeCondition): boolean {
-    this.log.warning(`checkTimeCondition: conditon: ${this.stringify(condition)}`);
-
     const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const now = new Date();
     if (condition.weekday && !condition.weekday.includes(days[now.getDay()])) {
-      this.log.warning(`checkTimeCondition: automation: ${automation.name} conditon: ${this.stringify(condition.weekday)} false`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for weekday: ${this.stringify(condition.weekday)}`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for weekday: ${this.stringify(condition.weekday)}`);
       return false;
     }
     if (condition.before) {
-      const match = condition.before.match(/(\d{2}):(\d{2}):(\d{2})/);
-      const time = new Date();
-      if (match) {
-        time.setHours(parseInt(match[1], 10));
-        time.setMinutes(parseInt(match[2], 10));
-        time.setSeconds(parseInt(match[3], 10));
+      const time = this.matchTimeString(condition.before);
+      if (time !== undefined) {
         if (now.getTime() > time.getTime()) {
-          this.log.warning(`checkTimeCondition: automation: ${automation.name} conditon before: ${condition.before} false`);
-          this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for before: ${condition.before}`);
+          this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for before: ${condition.before}`);
           return false;
         }
       } else {
@@ -583,29 +577,22 @@ class AutomationsExtension {
       }
     }
     if (condition.after) {
-      const match = condition.after.match(/(\d{2}):(\d{2}):(\d{2})/);
-      const time = new Date();
-      if (match) {
-        time.setHours(parseInt(match[1], 10));
-        time.setMinutes(parseInt(match[2], 10));
-        time.setSeconds(parseInt(match[3], 10));
+      const time = this.matchTimeString(condition.after);
+      if (time !== undefined) {
         if (now.getTime() < time.getTime()) {
-          this.log.warning(`checkTimeCondition: automation: ${automation.name} conditon after: ${condition.after} false`);
-          this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for after: ${condition.after}`);
+          this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for after: ${condition.after}`);
           return false;
         }
       } else {
         this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: after #${condition.after}# ignoring condition`);
       }
     }
-    this.log.warning(`checkTimeCondition: conditon: ${this.stringify(condition)} is true`);
-    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition ${this.stringify(condition)} is true`);
+    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is true for ${this.stringify(condition)}`);
     return true;
   }
 
   // Return false if condition is false
   private checkEntityCondition(automation: EventAutomation, condition: ConfigEntityCondition): boolean {
-    this.log.warning(`checkEntityCondition: conditon: ${this.stringify(condition)}`);
     if (!condition.entity) {
       this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: condition entity not specified`);
       return false;
@@ -615,31 +602,24 @@ class AutomationsExtension {
       this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: entity #${condition.entity}# not found`);
       return false;
     }
-
     const attribute = condition.attribute || 'state';
     const value = this.state.get(entity)[attribute];
     if (condition.state !== undefined && value !== condition.state) {
-      this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not '${condition.state}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not '${condition.state}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.equal !== undefined && value !== condition.equal) {
-      this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not equal '${condition.equal}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not equal '${condition.equal}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.below !== undefined && value >= condition.below) {
-      this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below ${condition.below}`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below '${condition.below}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not below '${condition.below}'`);
       return false;
     }
     if (condition.attribute !== undefined && condition.above !== undefined && value <= condition.above) {
-      this.log.warning(`checkEntityCondition: conditon false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above ${condition.above}`);
-      this.logger.debug(`[Automations] Condition check [${automation.name}] condition false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above '${condition.above}'`);
+      this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is false for entity #${condition.entity}# attribute '${attribute}' is '${value}' not above '${condition.above}'`);
       return false;
     }
-
-    this.log.warning(`checkEntityCondition: conditon: ${this.stringify(condition)} is true`);
     this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is true for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
     return true;
   }
@@ -651,7 +631,7 @@ class AutomationsExtension {
         this.logger.error(`[Automations] Entity #${action.entity}# not found so ignoring this action`);
         continue;
       }
-      let data: ConfigActionData;
+      let data: ConfigActionPayload;
       //this.log.warn('Payload:', typeof action.payload, action.payload)
       if (typeof action.payload === 'string') {
         if (action.payload === ConfigPayload.TURN_ON) {
@@ -732,7 +712,7 @@ class AutomationsExtension {
     this.logger.debug(`[Automations] Start ${action.turn_off_after} seconds turn_off_after timeout for automation [${automation.name}]`);
     const timeout = setTimeout(() => {
       delete this.turnOffAfterTimeouts[automation.name + action.entity];
-      this.logger.debug(`[Automations] Turn_off_after timeout for automation [${automation.name}]`);
+      //this.logger.debug(`[Automations] Turn_off_after timeout for automation [${automation.name}]`);
       const entity = this.zigbee.resolveEntity(action.entity);
       if (!entity) {
         this.logger.error(`[Automations] Entity #${action.entity}# not found so ignoring this action`);

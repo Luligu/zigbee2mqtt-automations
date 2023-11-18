@@ -28,26 +28,30 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
   active?:                ## Values: true or false Default: true (true: the automation is active)
   execute_once?:          ## Values: true or false Default: false (true: the automatione is executed only once)
   trigger: 
-    time?:                ## Values: time string hh:mm:ss or any suncalc sunrise, sunset ... 
+    ---------------------- time trigger ------------------------------            
+    time:                 ## Values: time string hh:mm:ss or any suncalc sunrise, sunset ... 
     latitude?:            ## Numeric latitude   Use https://www.latlong.net/ to get latidute and longitude based on your adress
     longitude?:           ## Numeric longitude  Use https://www.latlong.net/ to get latidute and longitude based on your adress
     elevation?:           ## Numeric elevation in meters for precise suncalc results Default: 0
-    platform:
-    entity: 
+    ---------------------- event trigger ------------------------------            
+    entity:               ## Name of the entity (device or group friendly name)
     for?: 
     action: 
-    attribute?: 
     state: 
     attribute:
+    equal?:
+    not_equal?:
     above?:
     below?:
   condition?:
+    ---------------------- event condition ------------------------------            
     entity:               ## Name of the entity (device or group friendly name)
     state?:               ## Values: ON OFF 
     attribute?:           ## Name of the attribute (example: state, brightness, illuminance_lux, occupancy)
     equal?:               ## Value of the attribute to evaluate
     above?:               ## Numeric value of attribute to evaluate
     below?:               ## Numeric value of attribute to evaluate
+    ---------------------- time condition ------------------------------            
     after?:               ## Time string hh:mm:ss
     before?:              ## Time string hh:mm:ss
     weekday?:             ## Day string or array of day strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
