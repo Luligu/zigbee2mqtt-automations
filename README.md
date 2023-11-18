@@ -28,12 +28,13 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
   active?:                ## Values: true or false Default: true (true: the automation is active)
   execute_once?:          ## Values: true or false Default: false (true: the automatione is executed only once)
   trigger: 
+    time?:                ## Values: time string hh:mm:ss or any suncalc sunrise, sunset ... 
+    latitude?:            ## Numeric latitude   Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    longitude?:           ## Numeric longitude  Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    elevation?:           ## Numeric elevation in meters for precise suncalc results Default: 0
     platform:
     entity: 
     for?: 
-    event?: 
-    latitude?: 
-    longitude?:
     action: 
     attribute?: 
     state: 
@@ -43,13 +44,13 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
   condition?:
     entity:               ## Name of the entity (device or group friendly name)
     state?:               ## Values: ON OFF 
-    attribute?:           ## Name of the attribute (example: state, brightness, illuminance_lux)
+    attribute?:           ## Name of the attribute (example: state, brightness, illuminance_lux, occupancy)
     equal?:               ## Value of the attribute to evaluate
     above?:               ## Numeric value of attribute to evaluate
     below?:               ## Numeric value of attribute to evaluate
     after?:               ## Time string hh:mm:ss
     before?:              ## Time string hh:mm:ss
-    weekday?:             ## Day string or day array of strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
+    weekday?:             ## Day string or array of day strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
   action: 
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
     payload:              ## Values: turn_on turn_off toggle or any supported attributes in an object or indented on the next rows (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
@@ -59,7 +60,7 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
 
 # trigger:
 
-# condition examples:
+# time condition examples:
 ```
   condition:
     after: 08:30:00
@@ -68,6 +69,7 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
 ```
 The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
 
+# event condition examples:
 ```
   condition:
     entity: At home
@@ -77,12 +79,33 @@ The automation is run only if 'At home' is ON
 
 ```
   condition:
+    entity: Light sensor
+    attribute: illuminance_lux
+    below: 100
+```
+The automation is run only if the illuminance_lux attribute of 'Light sensor' is below 100.
+
+```
+  condition:
     - entity: At home
       state: ON
     - entity: Is night
       state: OFF
 ```
 The automation is run only if 'At home' is ON and 'Is night' is OFF.
+For multiple entity conditions entity must be indented
+
+# time and event condition examples:
+```
+  condition:
+    - after: 08:00:00
+    - before: 22:30:00
+    - weekday: ['mon', 'tue', 'thu', 'fri']
+    - entity: Is night
+      state: ON
+    - entity: Is dark
+      state: ON
+```
 For multiple entity conditions entity must be indented
 
 # action examples:
@@ -98,6 +121,6 @@ For multiple entity conditions entity must be indented
     - entity: Moes switch double
       payload: { state_l1: ON }
 ```
-
+Payload can be a string (turn_on, turn_off and toggle or an object)
 
 Originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.

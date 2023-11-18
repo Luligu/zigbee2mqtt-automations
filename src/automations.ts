@@ -43,25 +43,35 @@ enum ConfigPlatform {
   STATE = 'state',
   NUMERIC_STATE = 'numeric_state',
   TIME = 'time',
-  SUNCALC = 'suncalc',
 }
 
-enum ConfigTimeTrigger {
+enum ConfigSunCalc {
+  SOLAR_NOON = 'solarNoon',
+  NADIR = 'nadir',
   SUNRISE = 'sunrise',
   SUNSET = 'sunset',
+  SUNRISE_END = 'sunriseEnd',
+  SUNSET_START = 'sunsetStart',
+  DAWN = 'dawn',
+  DUSK = 'dusk',
+  NAUTICAL_DAWN = 'nauticalDawn',
+  NAUTICAL_DUSK = 'nauticalDusk',
+  NIGHT_END = 'nightEnd',
+  NIGHT = 'night',
+  GOLDEN_HOUR_END = 'goldenHourEnd',
+  GOLDEN_HOUR = 'goldenHour',
 }
 
-enum StateOnOff {
+enum ConfigState {
   ON = 'ON',
   OFF = 'OFF',
   TOGGLE = 'TOGGLE',
 }
 
-enum ConfigService {
+enum ConfigPayload {
   TOGGLE = 'toggle',
   TURN_ON = 'turn_on',
   TURN_OFF = 'turn_off',
-  CUSTOM = 'custom',
 }
 
 //const WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -88,9 +98,14 @@ interface ConfigTrigger {
   platform: ConfigPlatform;
   entity: EntityId | EntityId[];
   for?: TriggerForType;
-  event?: string;
+  time?: TimeStringType;
+}
+
+interface ConfigTimeTrigger extends ConfigTrigger {
+  time: TimeStringType;
   latitude?: number;
   longitude?: number;
+  elevation?: number;
 }
 
 interface ConfigActionTrigger extends ConfigTrigger {
@@ -119,7 +134,7 @@ interface ConfigAction {
 }
 
 interface ConfigCondition {
-  platform: ConfigPlatform;
+  //platform: ConfigPlatform;
 }
 
 interface ConfigEntityCondition extends ConfigCondition {
@@ -275,7 +290,7 @@ class AutomationsExtension {
       //this.log.debug(`Entries Check triggers`, key);
       for (const trigger of triggers) {
         //this.log.debug(`Entries Check triggers 2`, key, trigger, trigger.platform);
-        if (!platforms.includes(trigger.platform)) {
+        if (!platforms.includes(trigger.platform) && !trigger.time) {
           this.logger.error(`[Automations] Config validation error for [${key}]: unknown trigger platform '${trigger.platform}'`);
           return;
         }
@@ -309,35 +324,30 @@ class AutomationsExtension {
       */
 
       for (const trigger of triggers) {
-        //this.log.debug(`Switch `, trigger.platform, trigger.entity);
-        switch (trigger.platform) {
-          case ConfigPlatform.TIME:
-            this.logger.info(`[Automations] Registering time automation [${key}]`);
-            if (trigger.event) {
-              if (!this.timeAutomations[trigger.event])
-                this.timeAutomations[trigger.event] = [];
-              this.timeAutomations[trigger.event].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
-            } else {
-              this.logger.error(`[Automations] Config validation error for [${key}]: trigger event not found`);
-              return;
-            }
-            break;
-          case ConfigPlatform.SUNCALC: {
-            this.logger.info(`[Automations] Registering suncalc automation [${key}]`);
-            const times = SunCalc.getTimes(new Date(), trigger.latitude, trigger.longitude);
-            this.logger.debug(`[Automations] Sunrise at ${times.sunrise.toLocaleTimeString()} sunset at ${times.sunset.toLocaleTimeString()} for latitude:${trigger.latitude} longitude:${trigger.longitude}`);
-            if (trigger.event === ConfigTimeTrigger.SUNRISE) {
-              if (!this.timeAutomations[times.sunrise.toLocaleTimeString()])
-                this.timeAutomations[times.sunrise.toLocaleTimeString()] = [];
-              this.timeAutomations[times.sunrise.toLocaleTimeString()].push({ name: key, trigger: trigger, action: actions, condition: conditions });
-            }
-            if (trigger.event === ConfigTimeTrigger.SUNSET) {
-              if (!this.timeAutomations[times.sunset.toLocaleTimeString()])
-                this.timeAutomations[times.sunset.toLocaleTimeString()] = [];
-              this.timeAutomations[times.sunset.toLocaleTimeString()].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
-            }
-            break;
+        if (trigger.time) {
+          const timeTrigger = trigger as ConfigTimeTrigger;
+          this.logger.info(`[Automations] Registering time automation [${key}] trigger: ${timeTrigger.time}`);
+          const suncalcs = Object.values(ConfigSunCalc);
+          if (suncalcs.includes(timeTrigger.time as ConfigSunCalc)) {
+            const times = SunCalc.getTimes(new Date(), timeTrigger.latitude, timeTrigger.longitude, timeTrigger.elevation ? timeTrigger.elevation : 0) as object;
+            this.logger.debug(`[Automations] Sunrise at ${times[ConfigSunCalc.SUNRISE].toLocaleTimeString()} sunset at ${times[ConfigSunCalc.SUNSET].toLocaleTimeString()} for latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0}`);
+            this.log.debug(`[Automations] For latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0} suncalc are:\n`, times);
+            const time = times[trigger.time].toLocaleTimeString();
+            if (!this.timeAutomations[time])
+              this.timeAutomations[time] = [];
+            this.timeAutomations[time].push({ name: key, execute_once: configAutomation.execute_once, trigger: trigger, action: actions, condition: conditions });
           }
+          else if (this.matchTimeString(timeTrigger.time)) {
+            if (!this.timeAutomations[timeTrigger.time])
+              this.timeAutomations[timeTrigger.time] = [];
+            this.timeAutomations[timeTrigger.time].push({ name: key, execute_once: configAutomation.execute_once, trigger: timeTrigger, action: actions, condition: conditions });
+          }
+          else {
+            this.logger.error(`[Automations] Config validation error for [${key}]: time syntax error '${trigger.time}'`);
+            return;
+          }
+        }
+        switch (trigger.platform) {
           case ConfigPlatform.ACTION:
           case ConfigPlatform.NUMERIC_STATE:
           case ConfigPlatform.STATE: {
@@ -365,6 +375,18 @@ class AutomationsExtension {
         } // switch
       }
     });
+  }
+
+  private matchTimeString(timeString: TimeStringType): Date | undefined {
+    const match = timeString.match(/(\d{2}):(\d{2}):(\d{2})/);
+    const time = new Date();
+    if (match && parseInt(match[1], 10) <= 23 && parseInt(match[2], 10) <= 59 && parseInt(match[3], 10) <= 59) {
+      time.setHours(parseInt(match[1], 10));
+      time.setMinutes(parseInt(match[2], 10));
+      time.setSeconds(parseInt(match[3], 10));
+      return time;
+    }
+    return undefined;
   }
 
   /**
@@ -632,12 +654,12 @@ class AutomationsExtension {
       let data: ConfigActionData;
       //this.log.warn('Payload:', typeof action.payload, action.payload)
       if (typeof action.payload === 'string') {
-        if (action.payload === ConfigService.TURN_ON) {
-          data = { state: StateOnOff.ON };
-        } else if (action.payload === ConfigService.TURN_OFF) {
-          data = { state: StateOnOff.OFF };
-        } else if (action.payload === ConfigService.TOGGLE) {
-          data = { state: StateOnOff.TOGGLE };
+        if (action.payload === ConfigPayload.TURN_ON) {
+          data = { state: ConfigState.ON };
+        } else if (action.payload === ConfigPayload.TURN_OFF) {
+          data = { state: ConfigState.OFF };
+        } else if (action.payload === ConfigPayload.TOGGLE) {
+          data = { state: ConfigState.TOGGLE };
         } else {
           this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
           return;
@@ -717,7 +739,7 @@ class AutomationsExtension {
         this.stopActionTurnOffTimeout(automation, action);
         return;
       }
-      const data = { state: StateOnOff.OFF };
+      const data = { state: ConfigState.OFF };
       if (action.logger === 'info')
         this.logger.info(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
       else if (action.logger === 'warn')
