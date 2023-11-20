@@ -1,5 +1,5 @@
 # zigbee2mqtt-automations
-Automations extension for zigbee2mqtt.
+Automations extension for zigbee2mqtt https://www.zigbee2mqtt.io/.
 Features:
 - support for multiple triggers;
 - support for time automations (execution at specified time);
@@ -11,16 +11,22 @@ Features:
   
 # What is an automation
 An automation typically consists of one or more triggers and executes one or more actions.
-Optionally, it can also include one or more conditions.
+Optionally, it can also include one or more conditions. 
+Any trigger can start the automation while conditions must all be true for the automation to run.
 
 # How to install
-Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
-Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml).
+Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml) and write your first automation.
 Please don't modify configuration.yaml.
+
 Method 1
+Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
 Stop zigbee2mqtt, wait it has stoppped and start it again (restart doesn't load the extensions) so it loads all the extensions (this seems to me the best way).
+
 Method 2
-In frontend Extensions add an extension. Name it automation.js. In the editor delete the default extension content and copy paste automation.js. Save it.
+In frontend go to Extensions add an extension. Name it automation.js and confirm. In the editor delete the default extension content and copy paste the entire content of automation.js. Save it.
+
+# How to reload the automations when the file automations.yaml has been modified.
+In frontend go to Extensions. Select automation.js and save. The extension is reloaded and the automations.yaml is reloaded too.
 
 # Config file automations.yaml:
 
