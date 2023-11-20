@@ -38,8 +38,8 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
   trigger: 
     ---------------------- time trigger ------------------------------            
     time:                 ## Values: time string hh:mm:ss or any suncalc sunrise, sunset ... 
-    latitude:             ## Numeric latitude   Use https://www.latlong.net/ to get latidute and longitude based on your adress
-    longitude:            ## Numeric longitude  Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    latitude?:            ## Numeric latitude (mandatory for suncalc triggers) Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    longitude?:           ## Numeric longitude (mandatory for suncalc triggers) Use https://www.latlong.net/ to get latidute and longitude based on your adress
     elevation?:           ## Numeric elevation in meters for precise suncalc results Default: 0
     ---------------------- event trigger ------------------------------            
     entity:               ## Name of the entity (device or group friendly name) to evaluate
@@ -65,12 +65,37 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
     weekday?:             ## Day string or array of day strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
   action: 
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
-    payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
+    payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows 
+                          (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
     logger?:              ## Values: debug info warn error. Default: debug. The action will be logged on z2m logger with the specified logging level
     turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
 ```
 
-# trigger:
+# trigger examples:
+```
+Turn off at 23:
+  trigger:
+    time: 23:00:00
+```
+The automation is run at the specified time
+```
+Sunset:
+  trigger:
+    time: sunset
+    latitude: 48.858372
+    longitude: 2.294481
+    elevation: 330
+```
+The automation is run at sunset time at the coordinates and elevation specified
+```
+Contact sensor OPENED:
+  trigger:
+    entity: Contact sensor
+    attribute: contact
+    equal: false
+```
+The automation is run when contact change to false for the device Contact sensor
+
 
 # time condition examples:
 ```
