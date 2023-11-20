@@ -2,10 +2,10 @@
  * This file contains the class AutomationsExtension and its definitions.
  *
  * @file automations.ts
- * @author Luligu
+ * @author Luligu (https://github.com/Luligu)
  * @date 2023-10-15
  *
- * All rights reserved.
+ * All rights reserved. See LICENSE in the root.
  *
  */
 

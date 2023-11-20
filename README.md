@@ -1,13 +1,14 @@
 # zigbee2mqtt-automations
-Automations extension for zigbee2mqtt https://www.zigbee2mqtt.io/.
+Automations extension for zigbee2mqtt. Learn more at https://www.zigbee2mqtt.io
+
 Features:
-- support for multiple triggers;
-- support for time automations (execution at specified time);
-- support for suncalc automations like sunset, sunrise and others at a specified location and altitude;
-- comprehensive logging within the zigbee2mqtt logging system for triggers, conditions and actions;
-- thorough validation of the automation configuration file for errors (errors are logged at loading time and the automation is discarded);
-- error messages and execution notifications are displayed as pop-up messages in frontend.
-- you can filter automation events in the frontend by entering [Automations] in the 'Filter by text' field. 
+- Support multiple event based triggers;
+- Support time automations (execution at specified time);
+- Support suncalc automations like sunset, sunrise and others at a specified location and altitude;
+- Provides comprehensive logging within the zigbee2mqtt logging system for triggers, conditions and actions;
+- Performs thorough validation of the automation configuration file for errors (errors are logged at loading time and the erroneous automation is discarded);
+- Error messages and execution notifications can be displayed as pop-up messages in frontend.
+- User can filter automation events in the frontend by entering [Automations] in the 'Filter by text' field. 
   
 # What is an automation
 An automation typically consists of one or more triggers and executes one or more actions.
@@ -15,12 +16,12 @@ Optionally, it can also include one or more conditions.
 Any trigger can start the automation while conditions must all be true for the automation to run.
 
 # How to install
-Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml) and write your first automation.
+Create an automations.yaml file in the  zigbee2mqtt\data directory (alongside configuration.yaml) and write your first automation.
 Please don't modify configuration.yaml.
 
 Method 1
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
-Stop zigbee2mqtt, wait it has stoppped and start it again (restart doesn't load the extensions) so it loads all the extensions (this seems to me the best way).
+Stop zigbee2mqtt, ensure it has completely stoppped, and then start it again (restart doesn't load the extensions) This method ensures all extensions are loaded.
 
 Method 2
 In frontend go to Extensions add an extension. Name it automation.js and confirm. In the editor delete the default extension content and copy paste the entire content of automation.js. Save it.
@@ -130,7 +131,7 @@ For multiple conditions after, before, weekday and entity must be indented
       payload: turn_on
       turn_off_after: 10
     - entity: Moes switch double
-      payload: { state_l1: ON }
+      payload: { state_l1: ON } 
 ```
 Payload can be a string (turn_on, turn_off and toggle or an object)
 ```
@@ -142,5 +143,5 @@ Payload can be a string (turn_on, turn_off and toggle or an object)
 Instead of specify an object it's possible to indent each attribute
 
 # credits
-Sun calculations are entirely taken from suncalc package https://www.npmjs.com/package/suncalc.
+Sun calculations are derived entirely from suncalc package https://www.npmjs.com/package/suncalc.
 This extension was originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.
