@@ -11,7 +11,7 @@
     "sourceMap": false,
     "outDir": "./dist/",
     "rootDir": "./src/",
-    "removeComments": true,
+    "removeComments": false,
     "downlevelIteration": true,
     "isolatedModules": true,
     "skipLibCheck": true,
@@ -34,7 +34,7 @@
     "baseUrl": "./",
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "strictPropertyInitialization": false
+    "strictPropertyInitialization": false,
   },
   "watchOptions": {
     "watchFile": "useFsEvents",

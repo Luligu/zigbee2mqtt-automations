@@ -1,5 +1,21 @@
+/**
+ * This file contains the class AutomationsExtension and its definitions.
+ *
+ * @file automations.ts
+ * @author Luligu (https://github.com/Luligu)
+ * @copyright 2023 Luligu
+ * @date 2023-10-15
+ *
+ * See LICENSE in the root.
+ *
+ */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// these packages are defined inside zigbee2mqtt and so not available here]
+// @ts-ignore
 const yaml_1 = require("../util/yaml");
+// @ts-ignore
 const data_1 = require("../util/data");
+// @ts-ignore
 const buffer_1 = require("buffer");
 function toArray(item) {
     return Array.isArray(item) ? item : [item];
@@ -65,9 +81,20 @@ class AutomationsExtension {
         this.turnOffAfterTimeouts = {};
         this.parseConfig(settings.get().automations || {});
         this.logger.info(`[Automations] Extension loaded`);
+        /*
+        this.log.info(`Event automation:`);
+        Object.keys(this.eventAutomations).forEach(key => {
+          const eventAutomationArray = this.eventAutomations[key];
+          eventAutomationArray.forEach(eventAutomation => {
+            this.log.info(`- key: #${key}# automation: ${this.stringify(eventAutomation, true)}`);
+          });
+        });
+        */
+        //this.log.info(`Time automation:`);
         Object.keys(this.timeAutomations).forEach(key => {
             const timeAutomationArray = this.timeAutomations[key];
             timeAutomationArray.forEach(timeAutomation => {
+                //this.log.info(`- key: #${key}# automation: ${this.stringify(timeAutomation, true)}`);
                 this.startTimeTriggers(key, timeAutomation);
             });
         });
@@ -81,6 +108,7 @@ class AutomationsExtension {
             const actions = toArray(configAutomation.action);
             const conditions = configAutomation.condition ? toArray(configAutomation.condition) : [];
             const triggers = toArray(configAutomation.trigger);
+            // Check automation
             if (configAutomation.active === false) {
                 this.logger.info(`[Automations] Automation [${key}] not registered since active is false`);
                 return;
@@ -93,6 +121,7 @@ class AutomationsExtension {
                 this.logger.error(`[Automations] Config validation error for [${key}]: no actions defined`);
                 return;
             }
+            // Check triggers
             for (const trigger of triggers) {
                 if (!trigger.time && !trigger.entity) {
                     this.logger.error(`[Automations] Config validation error for [${key}]: trigger entity not defined`);
@@ -103,6 +132,7 @@ class AutomationsExtension {
                     return;
                 }
             }
+            // Check actions
             for (const action of actions) {
                 if (!action.entity) {
                     this.logger.error(`[Automations] Config validation error for [${key}]: action entity not defined`);
@@ -117,6 +147,7 @@ class AutomationsExtension {
                     return;
                 }
             }
+            // Check conditions
             for (const condition of conditions) {
                 if (!condition.entity && !condition.after && !condition.before && !condition.weekday) {
                     this.logger.error(`[Automations] Config validation error for [${key}]: condition unknown`);
@@ -171,9 +202,12 @@ class AutomationsExtension {
                         this.eventAutomations[entity].push({ name: key, execute_once: configAutomation.execute_once, trigger: eventTrigger, action: actions, condition: conditions });
                     }
                 }
-            }
+            } // for (const trigger of triggers)
         });
     }
+    /**
+     * Check a time string and return a Date or undefined if error
+     */
     matchTimeString(timeString) {
         if (timeString.length !== 8)
             return undefined;
@@ -187,6 +221,10 @@ class AutomationsExtension {
         }
         return undefined;
     }
+    /**
+     * Start a timeout in the first second of tomorrow date.
+     * The timeout callback then will start the time triggers for tomorrow and start again a timeout for the next day.
+     */
     startMidnightTimeout() {
         const now = new Date();
         const timeEvent = new Date();
@@ -206,6 +244,11 @@ class AutomationsExtension {
         }, timeEvent.getTime() - now.getTime() + 2000);
         this.midnightTimeout.unref();
     }
+    /**
+     * Take the key of TimeAutomations that is a string like hh:mm:ss, convert it in a Date object of today
+     * and set the timer if not already passed for today.
+     * The timeout callback then will run the automations
+     */
     startTimeTriggers(key, automation) {
         const now = new Date();
         const timeEvent = this.matchTimeString(key);
@@ -228,11 +271,17 @@ class AutomationsExtension {
             this.logger.error(`[Automations] Timout config error at ${key} for [${automation.name}]`);
         }
     }
+    /**
+     * null - return
+     * false - return and stop timer
+     * true - start the automation
+     */
     checkTrigger(automation, configTrigger, update, from, to) {
         let trigger;
         let attribute;
         let result;
         let actions;
+        //this.log.warning(`[Automations] Trigger check [${automation.name}] update: ${this.stringify(update)} from: ${this.stringify(from)} to: ${this.stringify(to)}`);
         if (configTrigger.action !== undefined) {
             if (!Object.prototype.hasOwnProperty.call(update, 'action')) {
                 this.logger.debug(`[Automations] Trigger check [${automation.name}] no 'action' in update for #${configTrigger.entity}#`);
@@ -333,6 +382,7 @@ class AutomationsExtension {
         }
         return (timeResult && eventResult);
     }
+    // Return false if condition is false
     checkTimeCondition(automation, condition) {
         const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         const now = new Date();
@@ -367,6 +417,7 @@ class AutomationsExtension {
         this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is true for ${this.stringify(condition)}`);
         return true;
     }
+    // Return false if condition is false
     checkEntityCondition(automation, condition) {
         if (!condition.entity) {
             this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: condition entity not specified`);
@@ -406,6 +457,7 @@ class AutomationsExtension {
                 continue;
             }
             let data;
+            //this.log.warn('Payload:', typeof action.payload, action.payload)
             if (typeof action.payload === 'string') {
                 if (action.payload === ConfigPayload.TURN_ON) {
                     data = { state: ConfigState.ON };
@@ -440,7 +492,7 @@ class AutomationsExtension {
             if (action.turn_off_after) {
                 this.startActionTurnOffTimeout(automation, action);
             }
-        }
+        } // End for (const action of actions)
         if (automation.execute_once === true) {
             this.removeAutomation(automation.name);
         }
@@ -472,6 +524,7 @@ class AutomationsExtension {
             });
         });
     }
+    // Stop the turn_off_after timeout
     stopActionTurnOffTimeout(automation, action) {
         const timeout = this.turnOffAfterTimeouts[automation.name + action.entity];
         if (timeout) {
@@ -480,11 +533,13 @@ class AutomationsExtension {
             delete this.turnOffAfterTimeouts[automation.name + action.entity];
         }
     }
+    // Start the turn_off_after timeout
     startActionTurnOffTimeout(automation, action) {
         this.stopActionTurnOffTimeout(automation, action);
         this.logger.debug(`[Automations] Start ${action.turn_off_after} seconds turn_off_after timeout for automation [${automation.name}]`);
         const timeout = setTimeout(() => {
             delete this.turnOffAfterTimeouts[automation.name + action.entity];
+            //this.logger.debug(`[Automations] Turn_off_after timeout for automation [${automation.name}]`);
             const entity = this.zigbee.resolveEntity(action.entity);
             if (!entity) {
                 this.logger.error(`[Automations] Entity #${action.entity}# not found so ignoring this action`);
@@ -507,20 +562,24 @@ class AutomationsExtension {
     }
     runActionsWithConditions(automation, conditions, actions) {
         for (const condition of conditions) {
+            //this.log.warning(`runActionsWithConditions: conditon: ${this.stringify(condition)}`);
             if (!this.checkCondition(automation, condition)) {
                 return;
             }
         }
         this.runActions(automation, actions);
     }
+    // Stop the trigger_for timeout
     stopTriggerForTimeout(automation) {
         const timeout = this.triggerForTimeouts[automation.name];
         if (timeout) {
+            //this.log.debug(`Stop timeout for automation [${automation.name}] trigger: ${this.stringify(automation.trigger)}`);
             this.logger.debug(`[Automations] Stop trigger-for timeout for automation [${automation.name}]`);
             clearTimeout(timeout);
             delete this.triggerForTimeouts[automation.name];
         }
     }
+    // Start the trigger_for timeout
     startTriggerForTimeout(automation) {
         if (automation.trigger.for === undefined || automation.trigger.for === 0) {
             this.logger.error(`[Automations] Start ${automation.trigger.for} seconds trigger-for timeout error for automation [${automation.name}]`);
@@ -568,6 +627,7 @@ class AutomationsExtension {
         }
     }
     async start() {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.eventBus.onStateChange(this, (data) => {
             this.findAndRun(data.entity.name, data.update, data.from, data.to);
         });
@@ -622,6 +682,7 @@ class AutomationsExtension {
             if (typeof newValue === 'object') {
                 newValue = this.stringify(newValue, enableColors, colorPayload, colorKey, colorString, colorNumber, colorBoolean, colorUndefined, keyQuote, stringQuote);
             }
+            // new
             if (isArray)
                 string += `${newValue}`;
             else
@@ -630,25 +691,39 @@ class AutomationsExtension {
         return string += ` ${clr(colorPayload)}` + (isArray ? ']' : '}') + `${reset()}`;
     }
 }
+/*
+FROM HERE IS THE COPY IN TS OF SUNCALC PACKAGE https://www.npmjs.com/package/suncalc
+*/
+//
+// Use https://www.latlong.net/ to get latidute and longitude based on your adress
+//
+// sun calculations are based on http://aa.quae.nl/en/reken/zonpositie.html formulas
+// shortcuts for easier to read formulas
 const PI = Math.PI, sin = Math.sin, cos = Math.cos, tan = Math.tan, asin = Math.asin, atan = Math.atan2, acos = Math.acos, rad = PI / 180;
+// date/time constants and conversions
 const dayMs = 1000 * 60 * 60 * 24, J1970 = 2440588, J2000 = 2451545;
 function toJulian(date) { return date.valueOf() / dayMs - 0.5 + J1970; }
 function fromJulian(j) { return new Date((j + 0.5 - J1970) * dayMs); }
 function toDays(date) { return toJulian(date) - J2000; }
-const e = rad * 23.4397;
+// general calculations for position
+const e = rad * 23.4397; // obliquity of the Earth
 function rightAscension(l, b) { return atan(sin(l) * cos(e) - tan(b) * sin(e), cos(l)); }
 function declination(l, b) { return asin(sin(b) * cos(e) + cos(b) * sin(e) * sin(l)); }
 function azimuth(H, phi, dec) { return atan(sin(H), cos(H) * sin(phi) - tan(dec) * cos(phi)); }
 function altitude(H, phi, dec) { return asin(sin(phi) * sin(dec) + cos(phi) * cos(dec) * cos(H)); }
 function siderealTime(d, lw) { return rad * (280.16 + 360.9856235 * d) - lw; }
 function astroRefraction(h) {
-    if (h < 0)
-        h = 0;
+    if (h < 0) // the following formula works for positive altitudes only.
+        h = 0; // if h = -0.08901179 a div/0 would occur.
+    // formula 16.4 of "Astronomical Algorithms" 2nd edition by Jean Meeus (Willmann-Bell, Richmond) 1998.
+    // 1.02 / tan(h + 10.26 / (h + 5.10)) h in degrees, result in arc minutes -> converted to rad:
     return 0.0002967 / Math.tan(h + 0.00312536 / (h + 0.08901179));
 }
+// general sun calculations
 function solarMeanAnomaly(d) { return rad * (357.5291 + 0.98560028 * d); }
 function eclipticLongitude(M) {
-    const C = rad * (1.9148 * sin(M) + 0.02 * sin(2 * M) + 0.0003 * sin(3 * M)), P = rad * 102.9372;
+    const C = rad * (1.9148 * sin(M) + 0.02 * sin(2 * M) + 0.0003 * sin(3 * M)), // equation of center
+    P = rad * 102.9372; // perihelion of the Earth
     return M + C + P + PI;
 }
 function sunCoords(d) {
@@ -658,18 +733,26 @@ function sunCoords(d) {
         ra: rightAscension(L, 0)
     };
 }
+// calculations for sun times
 const J0 = 0.0009;
 function julianCycle(d, lw) { return Math.round(d - J0 - lw / (2 * PI)); }
 function approxTransit(Ht, lw, n) { return J0 + (Ht + lw) / (2 * PI) + n; }
 function solarTransitJ(ds, M, L) { return J2000 + ds + 0.0053 * sin(M) - 0.0069 * sin(2 * L); }
 function hourAngle(h, phi, d) { return acos((sin(h) - sin(phi) * sin(d)) / (cos(phi) * cos(d))); }
 function observerAngle(height) { return -2.076 * Math.sqrt(height) / 60; }
+// returns set time for the given sun altitude
 function getSetJ(h, lw, phi, dec, n, M, L) {
     const w = hourAngle(h, phi, dec), a = approxTransit(w, lw, n);
     return solarTransitJ(a, M, L);
 }
+// moon calculations, based on http://aa.quae.nl/en/reken/hemelpositie.html formulas
 function moonCoords(d) {
-    const L = rad * (218.316 + 13.176396 * d), M = rad * (134.963 + 13.064993 * d), F = rad * (93.272 + 13.229350 * d), l = L + rad * 6.289 * sin(M), b = rad * 5.128 * sin(F), dt = 385001 - 20905 * cos(M);
+    const L = rad * (218.316 + 13.176396 * d), // ecliptic longitude
+    M = rad * (134.963 + 13.064993 * d), // mean anomaly
+    F = rad * (93.272 + 13.229350 * d), // mean distance
+    l = L + rad * 6.289 * sin(M), // longitude
+    b = rad * 5.128 * sin(F), // latitude
+    dt = 385001 - 20905 * cos(M); // distance to the moon in km
     return {
         ra: rightAscension(l, b),
         dec: declination(l, b),
@@ -681,6 +764,7 @@ function hoursLater(date, h) {
 }
 class SunCalc {
     constructor() {
+        // sun times configuration (angle, morning name, evening name)
         this.times = [
             [-0.833, 'sunrise', 'sunset'],
             [-0.3, 'sunriseEnd', 'sunsetStart'],
@@ -690,6 +774,8 @@ class SunCalc {
             [6, 'goldenHourEnd', 'goldenHour']
         ];
     }
+    // calculates sun position for a given date and latitude/longitude
+    // @ts-ignore: Unused method
     getPosition(date, lat, lng) {
         const lw = rad * -lng, phi = rad * lat, d = toDays(date), c = sunCoords(d), H = siderealTime(d, lw) - c.ra;
         return {
@@ -697,9 +783,13 @@ class SunCalc {
             altitude: altitude(H, phi, c.dec)
         };
     }
+    // adds a custom time to the times config
+    // @ts-ignore: Unused method
     addTime(angle, riseName, setName) {
         this.times.push([angle, riseName, setName]);
     }
+    // calculates sun times for a given date, latitude/longitude, and, optionally,
+    // the observer height (in meters) relative to the horizon
     getTimes(date, lat, lng, height) {
         height = height || 0;
         const lw = rad * -lng, phi = rad * lat, dh = observerAngle(height), d = toDays(date), n = julianCycle(d, lw), ds = approxTransit(0, lw, n), M = solarMeanAnomaly(ds), L = eclipticLongitude(M), dec = declination(L, 0), Jnoon = solarTransitJ(ds, M, L);
@@ -721,8 +811,9 @@ class SunCalc {
     getMoonPosition(date, lat, lng) {
         const lw = rad * -lng, phi = rad * lat, d = toDays(date), c = moonCoords(d), H = siderealTime(d, lw) - c.ra;
         let h = altitude(H, phi, c.dec);
+        // formula 14.1 of "Astronomical Algorithms" 2nd edition by Jean Meeus (Willmann-Bell, Richmond) 1998.
         const pa = atan(sin(H), tan(phi) * cos(c.dec) - sin(c.dec) * cos(H));
-        h = h + astroRefraction(h);
+        h = h + astroRefraction(h); // altitude correction for refraction
         return {
             azimuth: azimuth(H, phi, c.dec),
             altitude: h,
@@ -730,8 +821,13 @@ class SunCalc {
             parallacticAngle: pa
         };
     }
+    // calculations for illumination parameters of the moon,
+    // based on http://idlastro.gsfc.nasa.gov/ftp/pro/astro/mphase.pro formulas and
+    // Chapter 48 of "Astronomical Algorithms" 2nd edition by Jean Meeus (Willmann-Bell, Richmond) 1998.
+    // @ts-ignore: Unused method
     getMoonIllumination(date) {
-        const d = toDays(date || new Date()), s = sunCoords(d), m = moonCoords(d), sdist = 149598000, phi = acos(sin(s.dec) * sin(m.dec) + cos(s.dec) * cos(m.dec) * cos(s.ra - m.ra)), inc = atan(sdist * sin(phi), m.dist - sdist * cos(phi)), angle = atan(cos(s.dec) * sin(s.ra - m.ra), sin(s.dec) * cos(m.dec) -
+        const d = toDays(date || new Date()), s = sunCoords(d), m = moonCoords(d), sdist = 149598000, // distance from Earth to Sun in km
+        phi = acos(sin(s.dec) * sin(m.dec) + cos(s.dec) * cos(m.dec) * cos(s.ra - m.ra)), inc = atan(sdist * sin(phi), m.dist - sdist * cos(phi)), angle = atan(cos(s.dec) * sin(s.ra - m.ra), sin(s.dec) * cos(m.dec) -
             cos(s.dec) * sin(m.dec) * cos(s.ra - m.ra));
         return {
             fraction: (1 + cos(inc)) / 2,
@@ -739,6 +835,8 @@ class SunCalc {
             angle: angle
         };
     }
+    // calculations for moon rise/set times are based on http://www.stargazing.net/kepler/moonrise.html article
+    // @ts-ignore: Unused method
     getMoonTimes(date, lat, lng, inUTC) {
         const t = new Date(date);
         if (inUTC)
@@ -748,6 +846,7 @@ class SunCalc {
         const hc = 0.133 * rad;
         let h0 = this.getMoonPosition(t, lat, lng).altitude - hc;
         let h1, h2, rise, set, a, b, xe, ye, d, roots, x1, x2, dx;
+        // go in 2-hour chunks, each time seeing if a 3-point quadratic curve crosses zero (which means rise or set)
         for (let i = 1; i <= 24; i += 2) {
             h1 = this.getMoonPosition(hoursLater(t, i), lat, lng).altitude - hc;
             h2 = this.getMoonPosition(hoursLater(t, i + 1), lat, lng).altitude - hc;

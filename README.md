@@ -142,6 +142,58 @@ Payload can be a string (turn_on, turn_off and toggle or an object)
 ```
 Instead of specify an object it's possible to indent each attribute
 
+# examples
+```
+Sunrise:
+  trigger:
+    time: sunrise
+    latitude: 48.858372
+    longitude: 2.294481
+    elevation: 330
+  action:
+    - entity: Moes RGB CCT led controller
+      payload: { state: OFF }
+    - entity: Is night
+      payload: { state: OFF }
+
+Sunset:
+  trigger:
+    time: sunset
+    latitude: 48.858372
+    longitude: 2.294481
+    elevation: 330
+  action:
+    - entity: Moes RGB CCT led controller
+      payload: { state: ON }
+    - entity: Is night
+      payload: { state: ON }
+```
+If there was a zigbee2mqtt installation in the top of the Eiffel Tower this would be the perfect automation.
+
+
+```
+Light sensor below 30lux for 60s:
+  trigger:
+    entity: Light sensor
+    attribute: illuminance_lux
+    below: 50
+    for: 60
+  action:
+    entity: Is dark
+    payload: turn_on
+
+Light sensor above 60lux for 60s:
+  trigger:
+    entity: Light sensor
+    attribute: illuminance_lux
+    above: 60
+    for: 60
+  action:
+    entity: Is dark
+    payload: turn_off
+```
+These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
+
 # credits
 Sun calculations are derived entirely from suncalc package https://www.npmjs.com/package/suncalc.
 This extension was originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.

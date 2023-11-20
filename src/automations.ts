@@ -3,17 +3,15 @@
  *
  * @file automations.ts
  * @author Luligu (https://github.com/Luligu)
+ * @copyright 2023 Luligu
  * @date 2023-10-15
  *
- * All rights reserved. See LICENSE in the root.
+ * See LICENSE in the root.
  *
  */
 
-//
-// [@ts-ignore is because the packages are defined inside zigbee2mqtt and so not available here]
-//
-
 /* eslint-disable @typescript-eslint/ban-ts-comment */
+// these packages are defined inside zigbee2mqtt and so not available here]
 // @ts-ignore
 import yaml from '../util/yaml';
 // @ts-ignore
