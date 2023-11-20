@@ -167,7 +167,7 @@ Payload can be a string (turn_on, turn_off and toggle or an object)
 ```
 Instead of specify an object it's possible to indent each attribute
 
-# examples
+# Complete automation examples
 ```
 Sunrise:
   trigger:
