@@ -16,7 +16,6 @@
 import yaml from '../util/yaml';
 // @ts-ignore
 import data from '../util/data';
-// @ts-ignore
 import { Buffer } from 'buffer';
 
 import type Zigbee from 'zigbee2mqtt/dist/zigbee';
@@ -229,9 +228,9 @@ class AutomationsExtension {
     this.triggerForTimeouts = {};
     this.turnOffAfterTimeouts = {};
 
-    this.parseConfig(settings.get().automations || {});
+    this.logger.info(`[Automations] Loading automation.js`);
 
-    this.logger.info(`[Automations] Extension loaded`);
+    this.parseConfig();
 
     /*
     this.log.info(`Event automation:`);
@@ -252,12 +251,13 @@ class AutomationsExtension {
     });
 
     this.startMidnightTimeout();
+
+    this.logger.info(`[Automations] Automation.js loaded`);
   }
 
-  private parseConfig(configAutomations: ConfigAutomations | string) {
-    if (typeof configAutomations === 'string') {
-      configAutomations = (yaml.readIfExists(data.joinPath(configAutomations)) || {}) as ConfigAutomations;
-    }
+  private parseConfig() {
+    const configAutomations = (yaml.readIfExists(data.joinPath('automations.yaml')) || {}) as ConfigAutomations;
+    //const configAutomations = (yaml.readIfExists('automations.yaml', {})) as ConfigAutomations;
 
     Object.entries(configAutomations).forEach(([key, configAutomation]) => {
       const actions = toArray(configAutomation.action);

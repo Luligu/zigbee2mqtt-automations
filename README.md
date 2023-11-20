@@ -1,5 +1,5 @@
 # zigbee2mqtt-automations
-Automations extension for zigbee2mqtt. Learn more at https://www.zigbee2mqtt.io
+Automations extension for zigbee2mqtt (www.zigbee2mqtt.io)
 
 Features:
 - Support multiple event based triggers;
@@ -219,6 +219,6 @@ Light sensor above 60lux for 60s:
 ```
 These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
 
-# credits
+# Credits
 Sun calculations are derived entirely from suncalc package https://www.npmjs.com/package/suncalc.
 This extension was originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.

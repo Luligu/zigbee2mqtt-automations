@@ -15,7 +15,6 @@
 const yaml_1 = require("../util/yaml");
 // @ts-ignore
 const data_1 = require("../util/data");
-// @ts-ignore
 const buffer_1 = require("buffer");
 function toArray(item) {
     return Array.isArray(item) ? item : [item];
@@ -79,8 +78,8 @@ class AutomationsExtension {
         this.mqttBaseTopic = settings.get().mqtt.base_topic;
         this.triggerForTimeouts = {};
         this.turnOffAfterTimeouts = {};
-        this.parseConfig(settings.get().automations || {});
-        this.logger.info(`[Automations] Extension loaded`);
+        this.logger.info(`[Automations] Loading automation.js`);
+        this.parseConfig();
         /*
         this.log.info(`Event automation:`);
         Object.keys(this.eventAutomations).forEach(key => {
@@ -99,11 +98,11 @@ class AutomationsExtension {
             });
         });
         this.startMidnightTimeout();
+        this.logger.info(`[Automations] Automation.js loaded`);
     }
-    parseConfig(configAutomations) {
-        if (typeof configAutomations === 'string') {
-            configAutomations = (yaml_1.default.readIfExists(data_1.default.joinPath(configAutomations)) || {});
-        }
+    parseConfig() {
+        const configAutomations = (yaml_1.default.readIfExists(data_1.default.joinPath('automations.yaml')) || {});
+        //const configAutomations = (yaml.readIfExists('automations.yaml', {})) as ConfigAutomations;
         Object.entries(configAutomations).forEach(([key, configAutomation]) => {
             const actions = toArray(configAutomation.action);
             const conditions = configAutomation.condition ? toArray(configAutomation.condition) : [];
