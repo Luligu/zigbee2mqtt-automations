@@ -3,10 +3,10 @@ Automations extension for zigbee2mqtt.
 Features:
 - support for multiple triggers;
 - support for time automations (execution at specified time);
-- support for suncalc automations like sunset and sunrise at specified location (uses the suncalc package);
+- support for suncalc automations like sunset, sunrise and others at a specified location and altitude;
 - comprehensive logging within the zigbee2mqtt logging system for triggers, conditions and actions;
 - thorough validation of the automation configuration file for errors (errors are logged at loading time and the automation is discarded);
-- error messages and execution notifications are displayed as pop-up messages in the frontend.
+- error messages and execution notifications are displayed as pop-up messages in frontend.
 - you can filter automation events in the frontend by entering [Automations] in the 'Filter by text' field. 
   
 # What is an automation
@@ -16,10 +16,11 @@ Optionally, it can also include one or more conditions.
 # How to install
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
 Create a file automations.yaml in the directory zigbee2mqtt\data (next to configuration.yaml).
-Add to the end of the file configuration.yaml this line: automations: automations.yaml
-Run in zigbee2mqtt: npm install suncalc
-In frontend Extensions add an extensione. Name it automation.js. In the editor delete the default extensione and copy paste automation.js.
-Restart zigbee2mqtt so it load all the extensions (this seems to me the best way).
+Please don't modify configuration.yaml.
+Method 1
+Stop zigbee2mqtt, wait it has stoppped and start it again (restart doesn't load the extensions) so it loads all the extensions (this seems to me the best way).
+Method 2
+In frontend Extensions add an extension. Name it automation.js. In the editor delete the default extension content and copy paste automation.js. Save it.
 
 # Config file automations.yaml:
 
@@ -30,36 +31,36 @@ Restart zigbee2mqtt so it load all the extensions (this seems to me the best way
   trigger: 
     ---------------------- time trigger ------------------------------            
     time:                 ## Values: time string hh:mm:ss or any suncalc sunrise, sunset ... 
-    latitude?:            ## Numeric latitude   Use https://www.latlong.net/ to get latidute and longitude based on your adress
-    longitude?:           ## Numeric longitude  Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    latitude:             ## Numeric latitude   Use https://www.latlong.net/ to get latidute and longitude based on your adress
+    longitude:            ## Numeric longitude  Use https://www.latlong.net/ to get latidute and longitude based on your adress
     elevation?:           ## Numeric elevation in meters for precise suncalc results Default: 0
     ---------------------- event trigger ------------------------------            
-    entity:               ## Name of the entity (device or group friendly name)
-    for?: 
-    action: 
-    state: 
-    attribute:
-    equal?:
-    not_equal?:
-    above?:
-    below?:
+    entity:               ## Name of the entity (device or group friendly name) to evaluate
+    for?:                 ## Number: duration in seconds for the specific attribute to remain in the triggered state
+    state:                ## Values: ON OFF
+    attribute:            ## Name of the attribute to evaluate (example: state, brightness, illuminance_lux, occupancy)
+    equal?:               ## Value of the attribute to evaluate with =
+    not_equal?:           ## Value of the attribute to evaluate with !=
+    above?:               ## Numeric value of the attribute to evaluate with >
+    below?:               ## Numeric value of the attribute to evaluate with <
+    action:               ## Value of the action to evaluate e.g. single, double, hold ...
   condition?:
     ---------------------- event condition ------------------------------            
-    entity:               ## Name of the entity (device or group friendly name)
+    entity:               ## Name of the entity (device or group friendly name) to evaluate
     state?:               ## Values: ON OFF 
     attribute?:           ## Name of the attribute (example: state, brightness, illuminance_lux, occupancy)
-    equal?:               ## Value of the attribute to evaluate
-    above?:               ## Numeric value of attribute to evaluate
-    below?:               ## Numeric value of attribute to evaluate
+    equal?:               ## Value of the attribute to evaluate with =
+    above?:               ## Numeric value of attribute to evaluate with >
+    below?:               ## Numeric value of attribute to evaluate with <
     ---------------------- time condition ------------------------------            
     after?:               ## Time string hh:mm:ss
     before?:              ## Time string hh:mm:ss
     weekday?:             ## Day string or array of day strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
   action: 
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
-    payload:              ## Values: turn_on turn_off toggle or any supported attributes in an object or indented on the next rows (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
-    logger?:              ## Values: debug info warn error Default: debug
-    turn_off_after?:      ## Number: seconds to wait before turning off entity
+    payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
+    logger?:              ## Values: debug info warn error. Default: debug. The action will be logged on z2m logger with the specified logging level
+    turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
 ```
 
 # trigger:
@@ -110,7 +111,7 @@ For multiple entity conditions entity must be indented
     - entity: Is dark
       state: ON
 ```
-For multiple entity conditions entity must be indented
+For multiple conditions after, before, weekday and entity must be indented
 
 # action examples:
 ```
@@ -126,5 +127,14 @@ For multiple entity conditions entity must be indented
       payload: { state_l1: ON }
 ```
 Payload can be a string (turn_on, turn_off and toggle or an object)
+```
+  action:
+    - entity: Moes switch double
+      payload: 
+        state_l1: ON
+```
+Instead of specify an object it's possible to indent each attribute
 
-Originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.
+# credits
+Sun calculations are entirely taken from suncalc package https://www.npmjs.com/package/suncalc.
+This extension was originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.
