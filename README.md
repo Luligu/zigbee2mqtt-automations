@@ -219,6 +219,11 @@ Light sensor above 60lux for 60s:
 ```
 These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
 
+# Sponsor
+If you like the extension:
+- https://www.paypal.com/paypalme/LuliguGitHub
+- https://www.buymeacoffee.com/luligugithub
+
 # Credits
 Sun calculations are derived entirely from suncalc package https://www.npmjs.com/package/suncalc.
 This extension was originally forked from https://github.com/Anonym-tsk/zigbee2mqtt-extensions.

@@ -496,6 +496,7 @@ class AutomationsExtension {
             this.removeAutomation(automation.name);
         }
     }
+    // Remove automation that has execute_once: true
     removeAutomation(name) {
         this.log.warning(`Uregistering automation [${name}]`);
         Object.keys(this.eventAutomations).forEach((entity) => {
