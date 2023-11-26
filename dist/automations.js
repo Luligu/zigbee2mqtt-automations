@@ -79,7 +79,8 @@ class AutomationsExtension {
         this.triggerForTimeouts = {};
         this.turnOffAfterTimeouts = {};
         this.logger.info(`[Automations] Loading automation.js`);
-        this.parseConfig();
+        if (!this.parseConfig())
+            return;
         /*
         this.log.info(`Event automation:`);
         Object.keys(this.eventAutomations).forEach(key => {
@@ -101,8 +102,15 @@ class AutomationsExtension {
         this.logger.info(`[Automations] Automation.js loaded`);
     }
     parseConfig() {
-        const configAutomations = (yaml_1.default.readIfExists(data_1.default.joinPath('automations.yaml')) || {});
-        //const configAutomations = (yaml.readIfExists('automations.yaml', {})) as ConfigAutomations;
+        let configAutomations = {};
+        try {
+            configAutomations = (yaml_1.default.readIfExists(data_1.default.joinPath('automations.yaml')) || {});
+        }
+        catch (error) {
+            this.logger.error(`[Automations] Error loading file automations.yaml: see stderr for explanation`);
+            console.log(error);
+            return false;
+        }
         Object.entries(configAutomations).forEach(([key, configAutomation]) => {
             const actions = toArray(configAutomation.action);
             const conditions = configAutomation.condition ? toArray(configAutomation.condition) : [];
@@ -148,7 +156,7 @@ class AutomationsExtension {
             }
             // Check conditions
             for (const condition of conditions) {
-                if (!condition.entity && !condition.after && !condition.before && !condition.weekday) {
+                if (!condition.entity && !condition.after && !condition.before && !condition.between && !condition.weekday) {
                     this.logger.error(`[Automations] Config validation error for [${key}]: condition unknown`);
                     return;
                 }
@@ -203,6 +211,7 @@ class AutomationsExtension {
                 }
             } // for (const trigger of triggers)
         });
+        return true;
     }
     /**
      * Check a time string and return a Date or undefined if error
@@ -373,7 +382,7 @@ class AutomationsExtension {
     checkCondition(automation, condition) {
         let timeResult = true;
         let eventResult = true;
-        if (condition.after || condition.before || condition.weekday) {
+        if (condition.after || condition.before || condition.between || condition.weekday) {
             timeResult = this.checkTimeCondition(automation, condition);
         }
         if (condition.entity) {
@@ -383,17 +392,18 @@ class AutomationsExtension {
     }
     // Return false if condition is false
     checkTimeCondition(automation, condition) {
+        this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)}`);
         const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         const now = new Date();
         if (condition.weekday && !condition.weekday.includes(days[now.getDay()])) {
-            this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for weekday: ${this.stringify(condition.weekday)}`);
+            this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for weekday: ${this.stringify(condition.weekday)} since today is ${days[now.getDay()]}`);
             return false;
         }
         if (condition.before) {
             const time = this.matchTimeString(condition.before);
             if (time !== undefined) {
                 if (now.getTime() > time.getTime()) {
-                    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for before: ${condition.before}`);
+                    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for before: ${condition.before} since now is ${now.toLocaleTimeString()}`);
                     return false;
                 }
             }
@@ -405,12 +415,39 @@ class AutomationsExtension {
             const time = this.matchTimeString(condition.after);
             if (time !== undefined) {
                 if (now.getTime() < time.getTime()) {
-                    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for after: ${condition.after}`);
+                    this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for after: ${condition.after} since now is ${now.toLocaleTimeString()}`);
                     return false;
                 }
             }
             else {
                 this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: after #${condition.after}# ignoring condition`);
+            }
+        }
+        if (condition.between) {
+            const [startTimeStr, endTimeStr] = condition.between.split('-');
+            const startTime = this.matchTimeString(startTimeStr);
+            const endTime = this.matchTimeString(endTimeStr);
+            if (startTime !== undefined && endTime !== undefined) {
+                this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} defined`);
+                // Internal time span: between: 08:00:00-20:00:00  
+                if (startTime.getTime() < endTime.getTime()) {
+                    this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} internal`);
+                    if (now.getTime() < startTime.getTime() || now.getTime() > endTime.getTime()) {
+                        this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for between: ${condition.between} since now is ${now.toLocaleTimeString()}`);
+                        return false;
+                    }
+                }
+                // External time span: between: 20:00:00-06:00:00  
+                else if (startTime.getTime() > endTime.getTime()) {
+                    this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} external`);
+                    if (now.getTime() < startTime.getTime() && now.getTime() > endTime.getTime()) {
+                        this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for between: ${condition.between} since now is ${now.toLocaleTimeString()}`);
+                        return false;
+                    }
+                }
+            }
+            else {
+                this.logger.error(`[Automations] Condition check [${automation.name}] config validation error: between #${condition.between}# ignoring condition`);
             }
         }
         this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is true for ${this.stringify(condition)}`);
@@ -498,28 +535,29 @@ class AutomationsExtension {
     }
     // Remove automation that has execute_once: true
     removeAutomation(name) {
-        this.log.warning(`Uregistering automation [${name}]`);
+        this.logger.debug(`[Automations] Uregistering automation [${name}]`);
+        //this.log.warning(`Uregistering automation [${name}]`);
         Object.keys(this.eventAutomations).forEach((entity) => {
-            this.log.warning(`Entity: #${entity}#`);
+            //this.log.warning(`Entity: #${entity}#`);
             Object.values(this.eventAutomations[entity]).forEach((eventAutomation, index) => {
                 if (eventAutomation.name === name) {
-                    this.log.warning(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
+                    //this.log.warning(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
                     this.eventAutomations[entity].splice(index, 1);
                 }
                 else {
-                    this.log.info(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
+                    //this.log.info(`Entity: #${entity}# ${index} event automation: ${eventAutomation.name}`);
                 }
             });
         });
         Object.keys(this.timeAutomations).forEach((now) => {
-            this.log.warning(`Time: #${now}#`);
+            //this.log.warning(`Time: #${now}#`);
             Object.values(this.timeAutomations[now]).forEach((timeAutomation, index) => {
                 if (timeAutomation.name === name) {
-                    this.log.warning(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
+                    //this.log.warning(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
                     this.timeAutomations[now].splice(index, 1);
                 }
                 else {
-                    this.log.info(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
+                    //this.log.info(`Time: #${now}# ${index} time automation: ${timeAutomation.name}`);
                 }
             });
         });

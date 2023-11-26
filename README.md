@@ -17,7 +17,7 @@ Any trigger can start the automation while conditions must all be true for the a
 
 # How to install
 Create an automations.yaml file in the  zigbee2mqtt\data directory (alongside configuration.yaml) and write your first automation.
-Please don't modify configuration.yaml.
+Don't modify configuration.yaml.
 
 Method 1
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
@@ -62,6 +62,7 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
     ---------------------- time condition ------------------------------            
     after?:               ## Time string hh:mm:ss
     before?:              ## Time string hh:mm:ss
+    between?:             ## Time range string hh:mm:ss-hh:mm:ss
     weekday?:             ## Day string or array of day strings: 'sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'
   action: 
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
@@ -94,7 +95,7 @@ Contact sensor OPENED:
     attribute: contact
     equal: false
 ```
-The automation is run when contact change to false for the device Contact sensor
+The automation is run when contact change to false (the contact is opened) for the device Contact sensor
 
 
 # time condition examples:
@@ -105,6 +106,18 @@ The automation is run when contact change to false for the device Contact sensor
     weekday: ['mon', 'tue', 'fri']
 ```
 The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
+
+```
+  condition:
+    between: 08:00:00-20:00:00
+```
+The automation is run only between 08:00 and 20:00
+
+```
+  condition:
+    between: 20:00:00-08:00:00
+```
+The automation is run only after 20:00 and before 08:00
 
 # event condition examples:
 ```
@@ -197,7 +210,7 @@ If there was a zigbee2mqtt installation in the top of the Eiffel Tower this woul
 
 
 ```
-Light sensor below 30lux for 60s:
+Light sensor below 50lux for 60s:
   trigger:
     entity: Light sensor
     attribute: illuminance_lux
@@ -219,10 +232,56 @@ Light sensor above 60lux for 60s:
 ```
 These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
 
+```
+Contact sensor OPENED:
+  trigger:
+    entity: Contact sensor
+    attribute: contact
+    equal: false
+  condition:
+    entity: At home
+    state: ON
+  action:
+    entity: Aqara switch T1
+    logger: info
+    payload: turn_on
+
+Contact sensor CLOSED:
+  trigger:
+    entity: Contact sensor
+    attribute: contact
+    state: true
+    for: 5
+  action:
+    entity: Aqara switch T1
+    logger: info
+    payload:
+      state: OFF
+```
+These automations turn on and off the device 'Aqara switch T1'
+
+```
+Motion triggers:
+  active: true
+  trigger:
+    entity: Motion sensor
+    attribute: occupancy
+    equal: true
+  action:
+    entity: Hallway light
+    payload: turn_on
+    turn_off_after: 60
+    logger: info
+```
+Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'
+
 # Sponsor
 If you like the extension:
 - https://www.paypal.com/paypalme/LuliguGitHub
 - https://www.buymeacoffee.com/luligugithub
+
+# Bug report and feature request
+https://github.com/Luligu/zigbee2mqtt-automations/issues
 
 # Credits
 Sun calculations are derived entirely from suncalc package https://www.npmjs.com/package/suncalc.
