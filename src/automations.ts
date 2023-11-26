@@ -561,7 +561,7 @@ class AutomationsExtension {
 
   // Return false if condition is false
   private checkTimeCondition(automation: EventAutomation, condition: ConfigTimeCondition): boolean {
-    this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)}`);
+    //this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)}`);
     const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const now = new Date();
     if (condition.weekday && !condition.weekday.includes(days[now.getDay()])) {
@@ -595,10 +595,8 @@ class AutomationsExtension {
       const startTime = this.matchTimeString(startTimeStr);
       const endTime = this.matchTimeString(endTimeStr);
       if (startTime !== undefined && endTime !== undefined) {
-        this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} defined`);
         // Internal time span: between: 08:00:00-20:00:00  
         if (startTime.getTime() < endTime.getTime()) {
-          this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} internal`);
           if (now.getTime() < startTime.getTime() || now.getTime() > endTime.getTime()) {
             this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for between: ${condition.between} since now is ${now.toLocaleTimeString()}`);
             return false;
@@ -606,7 +604,6 @@ class AutomationsExtension {
         }
         // External time span: between: 20:00:00-06:00:00  
         else if (startTime.getTime() > endTime.getTime()) {
-          this.logger.info(`[Automations] checkTimeCondition [${automation.name}]: ${this.stringify(condition)} external`);
           if (now.getTime() < startTime.getTime() && now.getTime() > endTime.getTime()) {
             this.logger.debug(`[Automations] Condition check [${automation.name}] time condition is false for between: ${condition.between} since now is ${now.toLocaleTimeString()}`);
             return false;

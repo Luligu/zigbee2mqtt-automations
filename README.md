@@ -261,10 +261,10 @@ Contact sensor CLOSED:
 These automations turn on and off the device 'Aqara switch T1'
 
 ```
-Motion triggers:
+Motion in the hallway:
   active: true
   trigger:
-    entity: Motion sensor
+    entity: Hallway motion sensor
     attribute: occupancy
     equal: true
   action:
