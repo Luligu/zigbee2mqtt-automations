@@ -8,6 +8,21 @@
     "type": "git",
     "url": "https://github.com/Luligu/zigbee2mqtt-automations"
   },
+  "keywords": [
+    "bridge",
+    "zigbee",
+    "mqtt",
+    "mqtt-accessories",
+    "zigbee2mqtt",
+    "zigbee-herdsman",
+    "zigbee-herdsman",
+    "zigbee-herdsman-converters",
+    "frontend",
+    "automations",
+    "extensions",
+    "automation",
+    "extension"
+  ],
   "bugs": {
     "url": "https://github.com/Luligu/zigbee2mqtt-automations/issues"
   },

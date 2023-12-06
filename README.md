@@ -16,12 +16,12 @@ Optionally, it can also include one or more conditions.
 Any trigger can start the automation while conditions must all be true for the automation to run.
 
 # How to install
-Create an automations.yaml file in the  zigbee2mqtt\data directory (alongside configuration.yaml) and write your first automation.
+Create an automations.yaml file in the zigbee2mqtt\data directory (alongside configuration.yaml) and write your first automation (copy from the examples).
 Don't modify configuration.yaml.
 
 Method 1
 Download the file dist\automation.js and place it in the zigbee2mqtt\data\extension directory (create the directory if it doesn't exist).
-Stop zigbee2mqtt, ensure it has completely stoppped, and then start it again (restart doesn't load the extensions) This method ensures all extensions are loaded.
+Stop zigbee2mqtt, ensure it has completely stoppped, and then start it again. This method ensures all extensions are loaded.
 
 Method 2
 In frontend go to Extensions add an extension. Name it automation.js and confirm. In the editor delete the default extension content and copy paste the entire content of automation.js. Save it.
@@ -276,7 +276,7 @@ Motion in the hallway:
 Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'
 
 # Sponsor
-If you like the extension:
+If you like the extension and want to sponsor it:
 - https://www.paypal.com/paypalme/LuliguGitHub
 - https://www.buymeacoffee.com/luligugithub
 
