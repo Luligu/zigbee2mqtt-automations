@@ -58,6 +58,10 @@ enum ConfigPayload {
   TURN_OFF = 'turn_off',
 }
 
+enum MessagePayload {
+  EXECUTE = 'execute'
+}
+
 type ConfigStateType = string;
 type ConfigPayloadType = string | number | boolean;
 type ConfigActionType = string;
@@ -186,6 +190,11 @@ type TimeAutomations = {
   [key: TimeId]: TimeAutomation[],
 };
 
+type MQTTMessage = {
+  topic: string,
+  message: string
+}
+
 class InternalLogger {
   constructor() { }
 
@@ -208,6 +217,8 @@ class InternalLogger {
 
 class AutomationsExtension {
   private readonly mqttBaseTopic: string;
+  private readonly automationsTopic: string;
+  private readonly topicRegex: RegExp;
   private readonly eventAutomations: EventAutomations = {};
   private readonly timeAutomations: TimeAutomations = {};
   private readonly triggerForTimeouts: Record<string, NodeJS.Timeout>;
@@ -228,6 +239,8 @@ class AutomationsExtension {
     this.mqttBaseTopic = settings.get().mqtt.base_topic;
     this.triggerForTimeouts = {};
     this.turnOffAfterTimeouts = {};
+    this.automationsTopic = 'zigbee2mqtt-automations';
+    this.topicRegex = new RegExp(`^${this.automationsTopic}\/(.*)`);
 
     this.logger.info(`[Automations] Loading automation.js`);
 
@@ -833,11 +846,44 @@ class AutomationsExtension {
     }
   }
 
+  private processMessage(message: MQTTMessage)
+  {
+    const match = message.topic.match(this.topicRegex);
+
+    if (match) {
+
+      for (const automations of Object.values(this.eventAutomations)) {
+
+        for (const automation of automations) {
+
+          if (automation.name == match[1]) {
+            this.logger.info(`[Automations] MQTT message for [${match[1]}]: ${message.message}`);
+
+            switch (message.message) {
+              case MessagePayload.EXECUTE:
+                this.runActions(automation, automation.action);
+                break;
+            }
+
+            return;
+          }
+        }
+      }
+    }
+  }
+
   async start() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.eventBus.onStateChange(this, (data: any) => {
       this.findAndRun(data.entity.name, data.update, data.from, data.to);
     });
+
+    this.mqtt.subscribe(`${this.automationsTopic}/+`);
+
+    this.eventBus.onMQTTMessage(this, (data: MQTTMessage) => {
+      this.processMessage(data);
+    });
+
   }
 
   async stop() {
@@ -853,6 +899,7 @@ class AutomationsExtension {
       delete this.turnOffAfterTimeouts[key];
     }
     clearTimeout(this.midnightTimeout);
+
     this.logger.debug(`[Automations] Removing listeners`);
     this.eventBus.removeListeners(this);
     this.logger.debug(`[Automations] Extension unloaded`);
