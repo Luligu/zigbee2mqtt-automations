@@ -13,7 +13,7 @@ $jsonPayload | Set-Content -Path $jsonFilePath
 
 # Use the temporary file in the mosquitto_pub command
 & 'C:\Program Files\mosquitto\mosquitto_pub' -h localhost -t 'zigbee2mqtt/bridge/request/extension/save' -f $jsonFilePath
-#& 'C:\Program Files\mosquitto\mosquitto_pub' -h raspberrypi.local -t 'zigbee2mqtt/bridge/request/extension/save' -f $jsonFilePath
+& 'C:\Program Files\mosquitto\mosquitto_pub' -h raspberrypi.local -t 'zigbee2mqtt/bridge/request/extension/save' -f $jsonFilePath
 
 # Optionally, clean up the temporary file after publishing
 Remove-Item -Path $jsonFilePath

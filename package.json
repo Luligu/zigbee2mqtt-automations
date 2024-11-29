@@ -1,6 +1,6 @@
 {
   "name": "zigbee2mqtt-automations",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Automations extension for zigbee2mqtt",
   "author": "Luligu",
   "license": "MIT",
@@ -14,7 +14,6 @@
     "mqtt",
     "mqtt-accessories",
     "zigbee2mqtt",
-    "zigbee-herdsman",
     "zigbee-herdsman",
     "zigbee-herdsman-converters",
     "frontend",

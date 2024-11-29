@@ -21,7 +21,6 @@
     "strictFunctionTypes": true,
     "noImplicitThis": true,
     "alwaysStrict": false,
-    "noImplicitUseStrict": true,
     "ignoreDeprecations": "5.0",
     "types": [
       "node"

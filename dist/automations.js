@@ -1,3 +1,4 @@
+"use strict";
 /**
  * This file contains the class AutomationsExtension and its definitions.
  *
@@ -179,7 +180,9 @@ class AutomationsExtension {
                         const times = suncalc.getTimes(new Date(), timeTrigger.latitude, timeTrigger.longitude, timeTrigger.elevation ? timeTrigger.elevation : 0);
                         this.logger.debug(`[Automations] Sunrise at ${times[ConfigSunCalc.SUNRISE].toLocaleTimeString()} sunset at ${times[ConfigSunCalc.SUNSET].toLocaleTimeString()} for latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0}`);
                         this.log.debug(`[Automations] For latitude:${timeTrigger.latitude} longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0} suncalc are:\n`, times);
-                        const time = times[trigger.time].toLocaleTimeString();
+                        const options = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                        const time = times[trigger.time].toLocaleTimeString('en-GB', options);
+                        this.log.debug(`[Automations] Registering time automation [${key}] trigger: ${time}`);
                         if (!this.timeAutomations[time])
                             this.timeAutomations[time] = [];
                         this.timeAutomations[time].push({ name: key, execute_once: configAutomation.execute_once, trigger: timeTrigger, action: actions, condition: conditions });
