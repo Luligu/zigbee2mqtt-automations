@@ -1,6 +1,6 @@
 {
   "name": "zigbee2mqtt-automations",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Automations extension for zigbee2mqtt",
   "author": "Luligu",
   "license": "MIT",

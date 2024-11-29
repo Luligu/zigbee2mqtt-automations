@@ -240,6 +240,7 @@ class AutomationsExtension {
     this.triggerForTimeouts = {};
     this.turnOffAfterTimeouts = {};
     this.automationsTopic = 'zigbee2mqtt-automations';
+    // eslint-disable-next-line no-useless-escape
     this.topicRegex = new RegExp(`^${this.automationsTopic}\/(.*)`);
 
     this.logger.info(`[Automations] Loading automation.js`);
