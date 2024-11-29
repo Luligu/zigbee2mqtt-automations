@@ -49,6 +49,10 @@ var ConfigPayload;
     ConfigPayload["TURN_ON"] = "turn_on";
     ConfigPayload["TURN_OFF"] = "turn_off";
 })(ConfigPayload || (ConfigPayload = {}));
+var MessagePayload;
+(function (MessagePayload) {
+    MessagePayload["EXECUTE"] = "execute";
+})(MessagePayload || (MessagePayload = {}));
 class InternalLogger {
     constructor() { }
     debug(message, ...args) {
@@ -79,6 +83,8 @@ class AutomationsExtension {
         this.mqttBaseTopic = settings.get().mqtt.base_topic;
         this.triggerForTimeouts = {};
         this.turnOffAfterTimeouts = {};
+        this.automationsTopic = 'zigbee2mqtt-automations';
+        this.topicRegex = new RegExp(`^${this.automationsTopic}\/(.*)`);
         this.logger.info(`[Automations] Loading automation.js`);
         if (!this.parseConfig())
             return;
@@ -664,10 +670,32 @@ class AutomationsExtension {
             this.runAutomationIfMatches(automation, update, from, to);
         }
     }
+    processMessage(message) {
+        const match = message.topic.match(this.topicRegex);
+        if (match) {
+            for (const automations of Object.values(this.eventAutomations)) {
+                for (const automation of automations) {
+                    if (automation.name == match[1]) {
+                        this.logger.info(`[Automations] MQTT message for [${match[1]}]: ${message.message}`);
+                        switch (message.message) {
+                            case MessagePayload.EXECUTE:
+                                this.runActions(automation, automation.action);
+                                break;
+                        }
+                        return;
+                    }
+                }
+            }
+        }
+    }
     async start() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this.eventBus.onStateChange(this, (data) => {
             this.findAndRun(data.entity.name, data.update, data.from, data.to);
+        });
+        this.mqtt.subscribe(`${this.automationsTopic}/+`);
+        this.eventBus.onMQTTMessage(this, (data) => {
+            this.processMessage(data);
         });
     }
     async stop() {
