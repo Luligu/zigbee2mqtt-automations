@@ -9,7 +9,9 @@ Features:
 - Performs thorough validation of the automation configuration file for errors (errors are logged at loading time and the erroneous automation is discarded);
 - Error messages and execution notifications can be displayed as pop-up messages in frontend.
 - User can filter automation events in the frontend by entering [Automations] in the 'Filter by text' field. 
-  
+
+If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/zigbee2mqtt-automations and sponsoring it.
+
 # What is an automation
 An automation typically consists of one or more triggers and executes one or more actions.
 Optionally, it can also include one or more conditions. 
