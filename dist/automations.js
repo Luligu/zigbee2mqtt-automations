@@ -69,12 +69,15 @@ class InternalLogger {
     }
 }
 class AutomationsExtension {
-    constructor(zigbee, mqtt, state, publishEntityState, eventBus, settings, logger) {
+    constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, logger) {
         this.zigbee = zigbee;
         this.mqtt = mqtt;
         this.state = state;
         this.publishEntityState = publishEntityState;
         this.eventBus = eventBus;
+        this.enableDisableExtension = enableDisableExtension;
+        this.restartCallback = restartCallback;
+        this.addExtension = addExtension;
         this.settings = settings;
         this.logger = logger;
         this.eventAutomations = {};
