@@ -22,6 +22,7 @@ import type Zigbee from 'zigbee2mqtt/dist/zigbee';
 import type MQTT from 'zigbee2mqtt/dist/mqtt';
 import type State from 'zigbee2mqtt/dist/state';
 import type EventBus from 'zigbee2mqtt/dist/eventBus';
+import type Extension from 'zigbee2mqtt/dist/extension/extension';
 import type Settings from 'zigbee2mqtt/dist/util/settings';
 import type Logger from 'zigbee2mqtt/dist/util/logger';
 
@@ -232,6 +233,9 @@ class AutomationsExtension {
     protected state: State,
     protected publishEntityState: unknown,
     protected eventBus: EventBus,
+    protected enableDisableExtension: (enable: boolean, name: string) => Promise<void>,
+    protected restartCallback: () => Promise<void>,
+    protected addExtension: (extension: Extension) => Promise<void>,
     protected settings: typeof Settings,
     protected logger: typeof Logger,
   ) {
