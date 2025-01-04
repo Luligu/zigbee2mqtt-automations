@@ -4,11 +4,16 @@ If you like this project and find it useful, please consider giving it a star on
 
 All notable changes to this project will be documented in this file.
 
+### Breaking Changes
+
+The extension signature has been updated in zigbee2MQTT 2.0.0. 
+When you update zigbee2MQTT to the latest 2.0.0, you also need to update zigbee2mqtt-automations.
+
 ## [2.0.0] - 2025-01-04
 
 ### Added
 
-- [extension]: The extension signature has been updated in zigbee2MQTT: merged PR https://github.com/Luligu/zigbee2mqtt-automations/pull/8 (thanks https://github.com/robvanoostenrijk).
+- [extension]: The extension signature has been updated in zigbee2MQTT 2.0.0. The PR https://github.com/Luligu/zigbee2mqtt-automations/pull/8 addressing the update has been merged. Many thanks to https://github.com/robvanoostenrijk for his contribution.
 
 <a href="https://www.buymeacoffee.com/luligugithub">
   <img src="./yellow-button.png" alt="Buy me a coffee" width="120">
