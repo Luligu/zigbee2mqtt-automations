@@ -444,20 +444,20 @@ class AutomationsExtension {
     const timeEvent = this.matchTimeString(key);
     if (timeEvent !== undefined) {
       if (timeEvent.getTime() > now.getTime()) {
-        this.logger.debug(`[Automations] Set timout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
+        this.logger.debug(`[Automations] Set timeout at ${timeEvent.toLocaleString()} for [${automation.name}]`);
         const timeout = setTimeout(() => {
           delete this.triggerForTimeouts[automation.name];
-          this.logger.debug(`[Automations] Timout for [${automation.name}]`);
+          this.logger.debug(`[Automations] Timeout for [${automation.name}]`);
           this.runActionsWithConditions(automation, automation.condition, automation.action);
         }, timeEvent.getTime() - now.getTime());
         timeout.unref();
         this.triggerForTimeouts[automation.name] = timeout;
       }
       else {
-        this.logger.debug(`[Automations] Timout at ${timeEvent.toLocaleString()} is passed for [${automation.name}]`);
+        this.logger.debug(`[Automations] Timeout at ${timeEvent.toLocaleString()} is passed for [${automation.name}]`);
       }
     } else {
-      this.logger.error(`[Automations] Timout config error at ${key} for [${automation.name}]`);
+      this.logger.error(`[Automations] Timeout config error at ${key} for [${automation.name}]`);
     }
   }
 
