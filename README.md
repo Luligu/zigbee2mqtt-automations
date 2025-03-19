@@ -70,8 +70,9 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
     payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows 
                           (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
-    logger?:              ## Values: debug info warn error. Default: debug. The action will be logged on z2m logger with the specified logging level
+    logger?:              ## Values: debug info warning error. Default: debug. The action will be logged on z2m logger with the specified logging level
     turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
+    payload_off?:         ## Values: any supported attributes in an object. Will use payload_off instead of { state: "OFF" }.
 ```
 
 # trigger examples:
@@ -276,6 +277,39 @@ Motion in the hallway:
     logger: info
 ```
 Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'
+
+```
+Motion in the hallway with custom payload_off:
+  active: true
+  trigger:
+    entity: Hallway motion sensor
+    attribute: occupancy
+    equal: true
+  action:
+    entity: Hallway light
+    payload: turn_on
+    turn_off_after: 60
+    payload_off: { state: "OFF" }
+    logger: info
+```
+Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'. Configure the payload_off to send.
+
+
+```
+Configure daily:
+  active: true
+  trigger:
+    time: 20:00:00
+  action:
+    - entity: Bathroom Lights
+      payload: { switch_type: "momentary" }
+      logger: info
+    - entity: Bathroom Leds
+      payload: { switch_type: "momentary" }
+      logger: info
+```
+Creates a daily routine to configure any devices that sometimes loose the correct setting.
+
 
 # Sponsor
 If you like the extension and want to sponsor it:

@@ -9,6 +9,23 @@ All notable changes to this project will be documented in this file.
 The extension signature has been updated in zigbee2MQTT 2.0.0. 
 When you update zigbee2MQTT to the latest 2.0.0, you also need to update zigbee2mqtt-automations.
 
+## [2.0.1] - 2025-03-19
+
+### Added
+
+- [typo]: Added the possibility to use turn_off_after with a specific payload_off. https://github.com/Luligu/zigbee2mqtt-automations/issues/16.
+- [examples]: Added the example "Motion in the hallway with custom payload_off" to use turn_off_after with a specific payload_off.
+- [examples]: Added the example "Configure daily".
+
+### Fixed
+
+- [logger]: The logger warning level is now warning and not warn.
+- [typo]: Fixed a typo: https://github.com/Luligu/zigbee2mqtt-automations/pull/15. Thanks https://github.com/robvanoostenrijk.
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="./yellow-button.png" alt="Buy me a coffee" width="120">
+</a>
+
 ## [2.0.0] - 2025-01-04
 
 ### Added

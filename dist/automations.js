@@ -528,8 +528,8 @@ class AutomationsExtension {
             }
             if (action.logger === 'info')
                 this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
-            else if (action.logger === 'warn')
-                this.logger.warn(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+            else if (action.logger === 'warning')
+                this.logger.warning(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
             else if (action.logger === 'error')
                 this.logger.error(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
             else
@@ -594,11 +594,11 @@ class AutomationsExtension {
                 this.stopActionTurnOffTimeout(automation, action);
                 return;
             }
-            const data = { state: ConfigState.OFF };
+            const data = action.payload_off ?? { state: ConfigState.OFF };
             if (action.logger === 'info')
                 this.logger.info(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
-            else if (action.logger === 'warn')
-                this.logger.warn(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
+            else if (action.logger === 'warning')
+                this.logger.warning(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
             else if (action.logger === 'error')
                 this.logger.error(`[Automations] Turn_off_after timeout for automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}# `);
             else
