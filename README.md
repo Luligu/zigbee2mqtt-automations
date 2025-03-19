@@ -12,6 +12,8 @@ Features:
 
 If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/zigbee2mqtt-automations and sponsoring it.
 
+Check also the https://github.com/Luligu/matterbridge-zigbee2mqtt matterbridge zigbee2mqtt plugin.
+
 # What is an automation
 An automation typically consists of one or more triggers and executes one or more actions.
 Optionally, it can also include one or more conditions. 
