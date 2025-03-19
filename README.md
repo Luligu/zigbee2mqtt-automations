@@ -1,4 +1,4 @@
-# zigbee2mqtt-automations
+# <img src="matterbridge.svg" alt="Matterbridge Logo" width="64px" height="64px">&nbsp;&nbsp;&nbsp; zigbee2mqtt-automations
 Automations extension for zigbee2mqtt (www.zigbee2mqtt.io)
 
 Features:
@@ -12,7 +12,15 @@ Features:
 
 If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/zigbee2mqtt-automations and sponsoring it.
 
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
+</a>
+
 Check also the https://github.com/Luligu/matterbridge-zigbee2mqtt matterbridge zigbee2mqtt plugin.
+
+<a href="https://github.com/Luligu/matterbridge-zigbee2mqtt">
+  <img src="matterbridge.svg" alt="Matterbridge Zigbee2MQTT Plugin" width="60">
+</a>
 
 # What is an automation
 An automation typically consists of one or more triggers and executes one or more actions.
@@ -317,6 +325,10 @@ Creates a daily routine to configure any devices that sometimes loose the correc
 If you like the extension and want to sponsor it:
 - https://www.paypal.com/paypalme/LuliguGitHub
 - https://www.buymeacoffee.com/luligugithub
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
+</a>
 
 # Bug report and feature request
 https://github.com/Luligu/zigbee2mqtt-automations/issues
