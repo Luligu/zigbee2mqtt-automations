@@ -136,7 +136,7 @@ Contact sensor OPENED:
     between: 20:00:00-08:00:00
 ```
 
-# event condition examples:
+# Event condition examples:
 
 ### The automation is run only if 'At home' is ON
 ```yaml
@@ -176,7 +176,7 @@ Contact sensor OPENED:
       state: ON
 ```
 
-# action examples:
+# Action examples:
 
 ### Payload can be a string (turn_on, turn_off and toggle or an object)
 ```yaml
