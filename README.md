@@ -85,7 +85,7 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
     payload_off?:         ## Values: any supported attributes in an object. Will use payload_off instead of { state: "OFF" }.
 ```
 
-# trigger examples:
+# Trigger examples:
 
 ### The automation is run at the specified time
 ```yaml
@@ -114,7 +114,7 @@ Contact sensor OPENED:
 ```
 
 
-# time condition examples:
+# Time condition examples:
 
 ### The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
 ```yaml
@@ -162,7 +162,7 @@ Contact sensor OPENED:
       state: OFF
 ```
 
-# time and event condition examples:
+# Time and event condition examples:
 
 ### For multiple conditions after, before, weekday and entity must be indented
 ```yaml
