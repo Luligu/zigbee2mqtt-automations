@@ -86,13 +86,16 @@ In frontend go to Extensions. Select automation.js and save. The extension is re
 ```
 
 # trigger examples:
-```
+
+### The automation is run at the specified time
+```yaml
 Turn off at 23:
   trigger:
     time: 23:00:00
 ```
-The automation is run at the specified time
-```
+
+### The automation is run at sunset time at the coordinates and elevation specified
+```yaml
 Sunset:
   trigger:
     time: sunset
@@ -100,66 +103,69 @@ Sunset:
     longitude: 2.294481
     elevation: 330
 ```
-The automation is run at sunset time at the coordinates and elevation specified
-```
+
+### The automation is run when contact change to false (the contact is opened) for the device Contact sensor
+```yaml
 Contact sensor OPENED:
   trigger:
     entity: Contact sensor
     attribute: contact
     equal: false
 ```
-The automation is run when contact change to false (the contact is opened) for the device Contact sensor
 
 
 # time condition examples:
-```
+
+### The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
+```yaml
   condition:
     after: 08:30:00
     before: 22:30:00
     weekday: ['mon', 'tue', 'fri']
 ```
-The automation is run only on monday, tuesday and friday and only after 08:30 and before 22:30
 
-```
+### The automation is run only between 08:00 and 20:00
+```yaml
   condition:
     between: 08:00:00-20:00:00
 ```
-The automation is run only between 08:00 and 20:00
 
-```
+### The automation is run only after 20:00 and before 08:00
+```yaml
   condition:
     between: 20:00:00-08:00:00
 ```
-The automation is run only after 20:00 and before 08:00
 
 # event condition examples:
-```
+
+### The automation is run only if 'At home' is ON
+```yaml
   condition:
     entity: At home
     state: ON
 ```
-The automation is run only if 'At home' is ON
 
-```
+### The automation is run only if the illuminance_lux attribute of 'Light sensor' is below 100.
+```yaml
   condition:
     entity: Light sensor
     attribute: illuminance_lux
     below: 100
 ```
-The automation is run only if the illuminance_lux attribute of 'Light sensor' is below 100.
 
-```
+### The automation is run only if 'At home' is ON and 'Is night' is OFF. For multiple entity conditions entity must be indented.
+```yaml
   condition:
     - entity: At home
       state: ON
     - entity: Is night
       state: OFF
 ```
-The automation is run only if 'At home' is ON and 'Is night' is OFF.
-For multiple entity conditions entity must be indented
 
 # time and event condition examples:
-```
+
+### For multiple conditions after, before, weekday and entity must be indented
+```yaml
   condition:
     - after: 08:00:00
     - before: 22:30:00
@@ -169,10 +175,11 @@ For multiple entity conditions entity must be indented
     - entity: Is dark
       state: ON
 ```
-For multiple conditions after, before, weekday and entity must be indented
 
 # action examples:
-```
+
+### Payload can be a string (turn_on, turn_off and toggle or an object)
+```yaml
   action:
     - entity: Miboxer RGB led controller
       payload: { brightness: 255, color: { r: 0, g: 0, b: 255 }, transition: 5 }
@@ -184,17 +191,19 @@ For multiple conditions after, before, weekday and entity must be indented
     - entity: Moes switch double
       payload: { state_l1: ON } 
 ```
-Payload can be a string (turn_on, turn_off and toggle or an object)
-```
+
+### Instead of specify an object it's possible to indent each attribute
+```yaml
   action:
     - entity: Moes switch double
       payload: 
         state_l1: ON
 ```
-Instead of specify an object it's possible to indent each attribute
 
 # Complete automation examples
-```
+
+### If there was a zigbee2mqtt installation in the top of the Eiffel Tower this would be the perfect automation.
+```yaml
 Sunrise:
   trigger:
     time: sunrise
@@ -206,7 +215,9 @@ Sunrise:
       payload: { state: OFF }
     - entity: Is night
       payload: { state: OFF }
+```
 
+```yaml
 Sunset:
   trigger:
     time: sunset
@@ -219,10 +230,10 @@ Sunset:
     - entity: Is night
       payload: { state: ON }
 ```
-If there was a zigbee2mqtt installation in the top of the Eiffel Tower this would be the perfect automation.
 
 
-```
+### These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
+```yaml
 Light sensor below 50lux for 60s:
   trigger:
     entity: Light sensor
@@ -232,7 +243,9 @@ Light sensor below 50lux for 60s:
   action:
     entity: Is dark
     payload: turn_on
+```
 
+```yaml
 Light sensor above 60lux for 60s:
   trigger:
     entity: Light sensor
@@ -243,9 +256,9 @@ Light sensor above 60lux for 60s:
     entity: Is dark
     payload: turn_off
 ```
-These automations turn on and off the group 'Is dark' based on the light mesured by a common light sensor for 60 secs (so there is not false reading)
 
-```
+### These automations turn on and off the device 'Aqara switch T1'
+```yaml
 Contact sensor OPENED:
   trigger:
     entity: Contact sensor
@@ -258,7 +271,9 @@ Contact sensor OPENED:
     entity: Aqara switch T1
     logger: info
     payload: turn_on
+```
 
+```yaml
 Contact sensor CLOSED:
   trigger:
     entity: Contact sensor
@@ -271,9 +286,9 @@ Contact sensor CLOSED:
     payload:
       state: OFF
 ```
-These automations turn on and off the device 'Aqara switch T1'
 
-```
+### Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'
+```yaml
 Motion in the hallway:
   active: true
   trigger:
@@ -286,9 +301,10 @@ Motion in the hallway:
     turn_off_after: 60
     logger: info
 ```
-Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'
 
-```
+
+### Turn on the light for 60 secs after occupancy is detected by 'Hallway motion sensor'. Configure the payload_off to send.
+```yaml
 Motion in the hallway with custom payload_off:
   active: true
   trigger:
@@ -302,10 +318,10 @@ Motion in the hallway with custom payload_off:
     payload_off: { state: "OFF" }
     logger: info
 ```
-Turn on the light for 60 secs after occupancy is detected by 'Motion sensor'. Configure the payload_off to send.
 
 
-```
+### Creates a daily routine to configure any devices that sometimes loose the correct setting.
+```yaml
 Configure daily:
   active: true
   trigger:
@@ -318,7 +334,6 @@ Configure daily:
       payload: { switch_type: "momentary" }
       logger: info
 ```
-Creates a daily routine to configure any devices that sometimes loose the correct setting.
 
 
 # Sponsor
