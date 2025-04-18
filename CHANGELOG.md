@@ -13,6 +13,17 @@ If you like this project and find it useful, please consider giving it a star on
 The extension signature has been updated in zigbee2MQTT 2.0.0. 
 When you update zigbee2MQTT to the latest 2.0.0, you also need to update zigbee2mqtt-automations.
 
+## [2.0.2] - 2025-04-19
+
+### Fixed
+
+- [suncalc]: Fixed the daily reloading of suncalc times.
+- [typo]: Fixed a typo: https://github.com/Luligu/zigbee2mqtt-automations/pull/15. Thanks https://github.com/robvanoostenrijk.
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
+</a>
+
 ## [2.0.1] - 2025-03-19
 
 ### Added

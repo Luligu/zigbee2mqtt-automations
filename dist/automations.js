@@ -4,14 +4,14 @@
  *
  * @file automations.ts
  * @author Luligu (https://github.com/Luligu)
- * @copyright 2023 Luligu
+ * @copyright 2023, 2024, 2025 Luligu
  * @date 2023-10-15
  *
  * See LICENSE in the root.
  *
  */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-// these packages are defined inside zigbee2mqtt and so not available here]
+// these packages are defined inside zigbee2mqtt and so not available here
 // @ts-ignore
 const yaml_1 = require("../util/yaml");
 // @ts-ignore
@@ -244,6 +244,7 @@ class AutomationsExtension {
     }
     /**
      * Start a timeout in the first second of tomorrow date.
+     * It also reload the suncalc times for the next day.
      * The timeout callback then will start the time triggers for tomorrow and start again a timeout for the next day.
      */
     startMidnightTimeout() {
@@ -255,12 +256,37 @@ class AutomationsExtension {
         this.logger.debug(`[Automations] Set timeout to reload for time automations`);
         this.midnightTimeout = setTimeout(() => {
             this.logger.info(`[Automations] Run timeout to reload time automations`);
+            const newTimeAutomations = {};
+            const suncalcs = Object.values(ConfigSunCalc);
             Object.keys(this.timeAutomations).forEach(key => {
                 const timeAutomationArray = this.timeAutomations[key];
                 timeAutomationArray.forEach(timeAutomation => {
-                    this.startTimeTriggers(key, timeAutomation);
+                    if (suncalcs.includes(timeAutomation.trigger.time)) {
+                        if (!timeAutomation.trigger.latitude || !timeAutomation.trigger.longitude)
+                            return;
+                        const suncalc = new SunCalc();
+                        const times = suncalc.getTimes(new Date(), timeAutomation.trigger.latitude, timeAutomation.trigger.longitude, timeAutomation.trigger.elevation ?? 0);
+                        // this.log.info(`Key:[${key}] For latitude:${timeAutomation.trigger.latitude} longitude:${timeAutomation.trigger.longitude} elevation:${timeAutomation.trigger.elevation ?? 0} suncalcs are:\n`, times);
+                        const options = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                        const time = times[timeAutomation.trigger.time].toLocaleTimeString('en-GB', options);
+                        // this.log.info(`Registering suncalc time automation at time [${time}] for:`, timeAutomation);                   
+                        this.logger.info(`[Automations] Registering suncalc time automation at time [${time}] for: ${this.stringify(timeAutomation)}`);
+                        if (!newTimeAutomations[time])
+                            newTimeAutomations[time] = [];
+                        newTimeAutomations[time].push(timeAutomation);
+                        this.startTimeTriggers(time, timeAutomation);
+                    }
+                    else {
+                        // this.log.info(`Registering normal time automation at time [${key}] for:`, timeAutomation);
+                        this.logger.info(`[Automations] Registering normal time automation at time [${key}] for: ${this.stringify(timeAutomation)}`);
+                        if (!newTimeAutomations[key])
+                            newTimeAutomations[key] = [];
+                        newTimeAutomations[key].push(timeAutomation);
+                        this.startTimeTriggers(key, timeAutomation);
+                    }
                 });
             });
+            this.timeAutomations = newTimeAutomations;
             this.startMidnightTimeout();
         }, timeEvent.getTime() - now.getTime() + 2000);
         this.midnightTimeout.unref();
