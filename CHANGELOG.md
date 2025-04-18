@@ -18,7 +18,6 @@ When you update zigbee2MQTT to the latest 2.0.0, you also need to update zigbee2
 ### Fixed
 
 - [suncalc]: Fixed the daily reloading of suncalc times.
-- [typo]: Fixed a typo: https://github.com/Luligu/zigbee2mqtt-automations/pull/15. Thanks https://github.com/robvanoostenrijk.
 
 <a href="https://www.buymeacoffee.com/luligugithub">
   <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
