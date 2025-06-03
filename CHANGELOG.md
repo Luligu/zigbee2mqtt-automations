@@ -8,10 +8,15 @@ If you like this project and find it useful, please consider giving it a star on
   <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
 </a>
 
-### Breaking Changes
+## [2.0.3] - 2025-04-19
 
-The extension signature has been updated in zigbee2MQTT 2.0.0. 
-When you update zigbee2MQTT to the latest 2.0.0, you also need to update zigbee2mqtt-automations.
+### Fixed
+
+- [extension]: In the new release on zigbee2mqtt, the external extensions are now loaded from a temp directory. We use require to load the needed packages (yaml and data) from where we know they are.
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
+</a>
 
 ## [2.0.2] - 2025-04-19
 

@@ -11,11 +11,13 @@
  *
  */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-// these packages are defined inside zigbee2mqtt and so not available here
-// @ts-ignore
-const yaml_1 = require("../util/yaml");
-// @ts-ignore
-const data_1 = require("../util/data");
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path_1 = require("path");
+const utilDir = path_1.default.join(__dirname, "..", "util");
+// These packages are defined inside zigbee2mqtt and so they are not available here to import
+// The external extensions are now loaded from a temp directory, we can use require to load them from where we know they are
+const yaml = require(path_1.default.join(utilDir, "yaml"));
+const data = require(path_1.default.join(utilDir, "data"));
 const buffer_1 = require("buffer");
 function toArray(item) {
     return Array.isArray(item) ? item : [item];
@@ -115,7 +117,7 @@ class AutomationsExtension {
     parseConfig() {
         let configAutomations = {};
         try {
-            configAutomations = (yaml_1.default.readIfExists(data_1.default.joinPath('automations.yaml')) || {});
+            configAutomations = (yaml.readIfExists(data.joinPath('automations.yaml')) || {});
         }
         catch (error) {
             this.logger.error(`[Automations] Error loading file automations.yaml: see stderr for explanation`);

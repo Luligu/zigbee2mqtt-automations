@@ -11,11 +11,14 @@
  */
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-// these packages are defined inside zigbee2mqtt and so not available here
-// @ts-ignore
-import yaml from '../util/yaml';
-// @ts-ignore
-import data from '../util/data';
+/* eslint-disable @typescript-eslint/no-var-requires */
+
+import path from "path";
+const utilDir = path.join(__dirname, "..", "util");
+// These packages are defined inside zigbee2mqtt and so they are not available here to import
+// The external extensions are now loaded from a temp directory, we can use require to load them from where we know they are
+const yaml = require(path.join(utilDir, "yaml"));
+const data = require(path.join(utilDir, "data"));
 import { Buffer } from 'buffer';
 
 import type Zigbee from 'zigbee2mqtt/dist/zigbee';
