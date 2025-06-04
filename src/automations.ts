@@ -13,21 +13,25 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/no-var-requires */
 
-import path from "path";
-const utilDir = path.join(__dirname, "..", "util");
-// These packages are defined inside zigbee2mqtt and so they are not available here to import
-// The external extensions are now loaded from a temp directory, we can use require to load them from where we know they are
-const yaml = require(path.join(utilDir, "yaml"));
-const data = require(path.join(utilDir, "data"));
 import { Buffer } from 'buffer';
 
 import type Zigbee from 'zigbee2mqtt/dist/zigbee';
 import type MQTT from 'zigbee2mqtt/dist/mqtt';
 import type State from 'zigbee2mqtt/dist/state';
+import type Device from 'zigbee2mqtt/dist/model/device';
+import type Group from 'zigbee2mqtt/dist/model/device';
 import type EventBus from 'zigbee2mqtt/dist/eventBus';
 import type Extension from 'zigbee2mqtt/dist/extension/extension';
 import type Settings from 'zigbee2mqtt/dist/util/settings';
 import type Logger from 'zigbee2mqtt/dist/util/logger';
+
+// These packages are defined inside zigbee2mqtt and so they are not available here to import!
+// The external extensions are now loaded from a temp directory, we use require to load them from where we know they are
+const path = require("node:path");
+const joinPath = require(path.join(__dirname, "..", "..", "dist", "util", "data")).default.joinPath;
+const readIfExists = require(path.join(__dirname, "..", "..", "dist", "util", "yaml")).default.readIfExists;
+
+type StateChangeReason = "publishDebounce" | "groupOptimistic" | "lastSeenChanged" | "publishCached" | "publishThrottle";
 
 function toArray<T>(item: T | T[]): T[] {
   return Array.isArray(item) ? item : [item];
@@ -235,7 +239,7 @@ class AutomationsExtension {
     protected zigbee: Zigbee,
     protected mqtt: MQTT,
     protected state: State,
-    protected publishEntityState: unknown,
+    protected publishEntityState: (entity: Device | Group, payload: Record<string, unknown>, stateChangeReason?: StateChangeReason) => Promise<void>,
     protected eventBus: EventBus,
     protected enableDisableExtension: (enable: boolean, name: string) => Promise<void>,
     protected restartCallback: () => Promise<void>,
@@ -282,8 +286,8 @@ class AutomationsExtension {
   private parseConfig(): boolean {
     let configAutomations: ConfigAutomations = {};
     try {
-      configAutomations = (yaml.readIfExists(data.joinPath('automations.yaml')) || {}) as ConfigAutomations;
-
+      // configAutomations = (yaml.readIfExists(data.joinPath('automations.yaml')) || {}) as ConfigAutomations;
+      configAutomations = (readIfExists(joinPath('automations.yaml')) || {}) as ConfigAutomations;
     }
     catch (error) {
       this.logger.error(`[Automations] Error loading file automations.yaml: see stderr for explanation`);
