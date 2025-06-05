@@ -13,11 +13,12 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const buffer_1 = require("buffer");
-// These packages are defined inside zigbee2mqtt and so they are not available here to import
+// These packages are defined inside zigbee2mqtt and so they are not available here to import!
 // The external extensions are now loaded from a temp directory, we use require to load them from where we know they are
 const path = require("node:path");
-const joinPath = require(path.join(__dirname, "..", "..", "dist", "util", "data")).default.joinPath;
-const readIfExists = require(path.join(__dirname, "..", "..", "dist", "util", "yaml")).default.readIfExists;
+const utilPath = path.join(require.main?.path, "dist", "util");
+const joinPath = require(path.join(utilPath, "data")).default.joinPath;
+const readIfExists = require(path.join(utilPath, "yaml")).default.readIfExists;
 function toArray(item) {
     return Array.isArray(item) ? item : [item];
 }
