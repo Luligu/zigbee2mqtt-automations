@@ -8,6 +8,16 @@ If you like this project and find it useful, please consider giving it a star on
   <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
 </a>
 
+## [2.0.5] - 2025-06-06
+
+### Fixed
+
+- [extension]: In the release 2.4.0 commit: bdb94da46e0461337f4a61b4f2a6bfa5172f608f of zigbee2mqtt, the code changed again. This fix again using a different approch. Thanks https://github.com/robvanoostenrijk for your contribute.
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
+</a>
+
 ## [2.0.4] - 2025-06-04
 
 ### Fixed
