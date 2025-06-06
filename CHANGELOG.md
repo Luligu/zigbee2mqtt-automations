@@ -12,7 +12,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Fixed
 
-- [extension]: In the release 2.4.0 commit: bdb94da46e0461337f4a61b4f2a6bfa5172f608f of zigbee2mqtt, the code changed again. This fix again using a different approch. Thanks https://github.com/robvanoostenrijk for your contribute.
+- [extension]: In the release 2.4.0 commit: bdb94da46e0461337f4a61b4f2a6bfa5172f608f of zigbee2mqtt, the code changed again. This fix again using a different approach. Thanks https://github.com/robvanoostenrijk for your contribute.
 
 <a href="https://www.buymeacoffee.com/luligugithub">
   <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
