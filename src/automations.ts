@@ -28,8 +28,10 @@ import type Logger from 'zigbee2mqtt/dist/util/logger';
 // These packages are defined inside zigbee2mqtt and so they are not available here to import!
 // The external extensions are now loaded from a temp directory, we use require to load them from where we know they are
 const path = require("node:path");
-const joinPath = require(path.join(__dirname, "..", "..", "dist", "util", "data")).default.joinPath;
-const readIfExists = require(path.join(__dirname, "..", "..", "dist", "util", "yaml")).default.readIfExists;
+
+const utilPath = path.join(require.main?.path, "dist", "util")
+const joinPath = require(path.join(utilPath, "data")).default.joinPath;
+const readIfExists = require(path.join(utilPath, "yaml")).default.readIfExists;
 
 type StateChangeReason = "publishDebounce" | "groupOptimistic" | "lastSeenChanged" | "publishCached" | "publishThrottle";
 
