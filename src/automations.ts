@@ -1109,7 +1109,7 @@ class AutomationsExtension {
   }
 
   private payloadStringify(payload: object): string {
-    return this.stringify(payload, false, 255, 255, 35, 220, 159, 1, '"', '"');
+    return this.stringify(payload, false, 255, 255, 35, 220, 159, 1, 255, '"', '"');
   }
 
   private stringify(
@@ -1121,6 +1121,7 @@ class AutomationsExtension {
     colorNumber = 220,
     colorBoolean = 159,
     colorUndefined = 1,
+    colorNull = 255,
     keyQuote = '',
     stringQuote = "'",
   ): string {
@@ -1138,20 +1139,18 @@ class AutomationsExtension {
       }
       let newValue = '';
       newValue = value;
-      if (typeof newValue === 'string') {
+      if (newValue === null) {
+        newValue = `${clr(colorNull)}null${reset()}`;
+      } else if (typeof newValue === 'string') {
         newValue = `${clr(colorString)}${stringQuote}${newValue}${stringQuote}${reset()}`;
-      }
-      if (typeof newValue === 'number') {
+      } else if (typeof newValue === 'number') {
         newValue = `${clr(colorNumber)}${newValue}${reset()}`;
-      }
-      if (typeof newValue === 'boolean') {
+      } else if (typeof newValue === 'boolean') {
         newValue = `${clr(colorBoolean)}${newValue}${reset()}`;
-      }
-      if (typeof newValue === 'undefined') {
+      } else if (typeof newValue === 'undefined') {
         newValue = `${clr(colorUndefined)}undefined${reset()}`;
-      }
-      if (typeof newValue === 'object') {
-        newValue = this.stringify(newValue, enableColors, colorPayload, colorKey, colorString, colorNumber, colorBoolean, colorUndefined, keyQuote, stringQuote);
+      } else if (typeof newValue === 'object') {
+        newValue = this.stringify(newValue, enableColors, colorPayload, colorKey, colorString, colorNumber, colorBoolean, colorUndefined, colorNull, keyQuote, stringQuote);
       }
       // new
       if (isArray) string += `${newValue}`;
