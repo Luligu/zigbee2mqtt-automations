@@ -115,6 +115,9 @@ Publish topic: **"zigbee2mqtt-scenes/Name"** and raw message: **"execute"** wher
     entity:               ## Name of the entity (device or group friendly name) to send the payload to
     payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows
                           (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
+    cycle:                ## Array of payloads to cycle through on each trigger
+                          Each trigger advances to the next payload, wrapping back to the first after the last.
+                          (example: [{ scene_recall: 1 }, { scene_recall: 2 }, { scene_recall: 3 }])
     scene:                ## Name of the scene to run
     logger?:              ## Values: debug info warning error. Default: debug. The action will be logged on z2m logger with the specified logging level
     turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
@@ -245,6 +248,18 @@ action:
   - entity: Moes switch double
     payload:
       state_l1: ON
+```
+
+### Cycle can be an array of payloads
+
+```yaml
+action:
+  entity: Office Ceiling Light
+  cycle:
+    - { scene_recall: 1 }
+    - { scene_recall: 2 }
+    - { scene_recall: 3 }
+  logger: info
 ```
 
 # Complete automation examples
@@ -383,6 +398,23 @@ Configure daily:
     - entity: Bathroom Leds
       payload: { switch_type: "momentary" }
       logger: info
+```
+
+### Cycle through light scenes with a button press.
+
+```yaml
+Change office light scene:
+  trigger:
+    entity: Office Wall Switch
+    action: press_1
+  action:
+    entity: Office Ceiling Light
+    cycle:
+      - { scene_recall: 1 }
+      - { scene_recall: 2 }
+      - { scene_recall: 3 }
+      - { scene_recall: 5 }
+    logger: info
 ```
 
 # Config file scenes.yaml:

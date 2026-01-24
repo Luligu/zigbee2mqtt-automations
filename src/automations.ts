@@ -161,6 +161,8 @@ interface ConfigAction {
   logger?: LoggerType;
   // scene type action
   scene?: SceneId; // scene name
+  // cycle (through payloads) type action
+  cycle?: ConfigActionPayload[];
 }
 
 interface ConfigCondition {}
@@ -270,6 +272,7 @@ class AutomationsExtension {
   private timeAutomations: TimeAutomations = {};
   private readonly triggerForTimeouts: Record<string, NodeJS.Timeout>;
   private readonly turnOffAfterTimeouts: Record<string, NodeJS.Timeout>;
+  private readonly cycleCounts: Record<string, number>;
   private midnightTimeout: NodeJS.Timeout | undefined;
   private readonly log: InternalLogger;
 
@@ -289,6 +292,7 @@ class AutomationsExtension {
     this.mqttBaseTopic = settings.get().mqtt.base_topic;
     this.triggerForTimeouts = {};
     this.turnOffAfterTimeouts = {};
+    this.cycleCounts = {};
     this.automationsTopic = 'zigbee2mqtt-automations';
     this.scenesTopic = 'zigbee2mqtt-scenes';
     // eslint-disable-next-line no-useless-escape
@@ -397,8 +401,18 @@ class AutomationsExtension {
           this.logger.error(`[Automations] Config validation error for [${key}]: action entity #${action.entity}# not found`);
           return;
         }
-        if (action.entity && !action.payload) {
-          this.logger.error(`[Automations] Config validation error for [${key}]: action payload not defined`);
+        if (action.entity && !action.payload && !action.cycle) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: action payload or cycle not defined`);
+          return;
+        }
+        if (action.cycle) {
+          if (!Array.isArray(action.cycle) || action.cycle.length < 2) {
+            this.logger.error(`[Automations] Config validation error for [${key}]: cycle must be an array with at least 2 payloads`);
+            return;
+          }
+        }
+        if (action.payload && action.cycle) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: cannot use both payload and cycle in the same action`);
           return;
         }
         if (action.scene && !this.scenes[action.scene]) {
@@ -861,24 +875,41 @@ class AutomationsExtension {
         continue;
       }
       let data: ConfigActionPayload;
-      // this.log.warn('Payload:', typeof action.payload, action.payload)
-      if (typeof action.payload === 'string') {
-        if (action.payload === ConfigPayload.TURN_ON) {
-          data = { state: ConfigState.ON };
-        } else if (action.payload === ConfigPayload.TURN_OFF) {
-          data = { state: ConfigState.OFF };
-        } else if (action.payload === ConfigPayload.TOGGLE) {
-          data = { state: ConfigState.TOGGLE };
+
+      if (action.payload) {
+        // this.log.warn('Payload:', typeof action.payload, action.payload)
+        if (typeof action.payload === 'string') {
+          if (action.payload === ConfigPayload.TURN_ON) {
+            data = { state: ConfigState.ON };
+          } else if (action.payload === ConfigPayload.TURN_OFF) {
+            data = { state: ConfigState.OFF };
+          } else if (action.payload === ConfigPayload.TOGGLE) {
+            data = { state: ConfigState.TOGGLE };
+          } else {
+            this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
+            return;
+          }
+        } else if (typeof action.payload === 'object') {
+          data = action.payload;
         } else {
           this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
           return;
         }
-      } else if (typeof action.payload === 'object') {
-        data = action.payload;
+      } else if (action.cycle) {
+        const cycleKey = `${automation.name}:${action.entity}`;
+        // Initialize cycle counter for this entity if it doesn't exist
+        if (this.cycleCounts[cycleKey] === undefined) {
+          this.cycleCounts[cycleKey] = 0;
+        }
+        // Get current payload from cycle array
+        data = action.cycle[this.cycleCounts[cycleKey]];
+        // Increment and wrap around
+        this.cycleCounts[cycleKey] = (this.cycleCounts[cycleKey] + 1) % action.cycle.length;
       } else {
-        this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
+        this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: neither payload nor cycle defined`);
         return;
       }
+
       if (action.logger === 'info') this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
       else if (action.logger === 'warning')
         this.logger.warning(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
