@@ -42,6 +42,9 @@
     "typescript-eslint": "8.43.0",
     "zigbee2mqtt": "2.6.1"
   },
+  "overrides": {
+    "minimatch": "^10.2.1"
+  },
   "scripts": {
     "start": "tsc --watch",
     "build": "tsc",

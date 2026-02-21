@@ -222,8 +222,8 @@ class AutomationsExtension {
             }
             // Check actions
             for (const action of actions) {
-                if (!action.entity && !action.scene) {
-                    this.logger.error(`[Automations] Config validation error for [${key}]: action entity or action scene not defined`);
+                if (!action.entity && !action.scene && !action.delay) {
+                    this.logger.error(`[Automations] Config validation error for [${key}]: action entity, action scene, or delay not defined`);
                     return;
                 }
                 if (action.entity && !this.zigbee.resolveEntity(action.entity)) {
@@ -641,12 +641,27 @@ class AutomationsExtension {
         this.logger.debug(`[Automations] Condition check [${automation.name}] event condition is true for entity #${condition.entity}# attribute '${attribute}' is '${value}'`);
         return true;
     }
-    runActions(automation, actions) {
+    async runActions(automation, actions) {
         for (const action of actions) {
             // Check if action is scene and run it
             if (action.scene && typeof action.scene === 'string') {
                 this.log.warning(`Executing scene: ${action.scene}`);
-                this.runActions({ name: action.scene }, this.scenes[action.scene]);
+                await this.runActions({ name: action.scene }, this.scenes[action.scene]);
+                continue;
+            }
+            // Check if action is delay and run it
+            if (action.delay && typeof action.delay === 'object') {
+                let delayMs = 0;
+                if (action.delay.hours)
+                    delayMs += action.delay.hours * 3600000;
+                if (action.delay.minutes)
+                    delayMs += action.delay.minutes * 60000;
+                if (action.delay.seconds)
+                    delayMs += action.delay.seconds * 1000;
+                if (action.delay.milliseconds)
+                    delayMs += action.delay.milliseconds;
+                this.logger.debug(`[Automations] Delay automation [${automation.name}] for ${delayMs}ms`);
+                await new Promise((resolve) => setTimeout(resolve, delayMs));
                 continue;
             }
             // Check if action is entity and run it
@@ -766,14 +781,14 @@ class AutomationsExtension {
         timeout.unref();
         this.turnOffAfterTimeouts[automation.name + action.entity] = timeout;
     }
-    runActionsWithConditions(automation, conditions, actions) {
+    async runActionsWithConditions(automation, conditions, actions) {
         for (const condition of conditions) {
             // this.log.warning(`runActionsWithConditions: conditon: ${this.stringify(condition)}`);
             if (!this.checkCondition(automation, condition)) {
                 return;
             }
         }
-        this.runActions(automation, actions);
+        await this.runActions(automation, actions);
     }
     // Stop the trigger_for timeout
     stopTriggerForTimeout(automation) {

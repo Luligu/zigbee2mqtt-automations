@@ -116,6 +116,7 @@ Publish topic: **"zigbee2mqtt-scenes/Name"** and raw message: **"execute"** wher
     payload:              ## Values: turn_on, turn_off, toggle or any supported attributes in an object or indented on the next rows
                           (example: { state: OFF, brightness: 254, color: { r: 0, g: 255, b: 0 } })
     scene:                ## Name of the scene to run
+    delay?:               ## Values: object containing hours, minutes, seconds, and/or milliseconds
     logger?:              ## Values: debug info warning error. Default: debug. The action will be logged on z2m logger with the specified logging level
     turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
     payload_off?:         ## Values: any supported attributes in an object. Will use payload_off instead of { state: "OFF" }.
@@ -245,6 +246,21 @@ action:
   - entity: Moes switch double
     payload:
       state_l1: ON
+```
+
+### Action with delay between execution
+
+```yaml
+action:
+  - entity: Light sensor 1
+    payload: turn_on
+  - delay:
+      hours: 1
+      minutes: 10
+      seconds: 30
+      milliseconds: 500
+  - entity: Light sensor 1
+    payload: turn_off
 ```
 
 # Complete automation examples

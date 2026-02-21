@@ -150,6 +150,13 @@ interface ConfigAttributeTrigger extends ConfigEventTrigger {
   below?: number;
 }
 
+interface ConfigDelay {
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+  milliseconds?: number;
+}
+
 type ConfigActionPayload = Record<ConfigAttributeType, ConfigPayloadType>;
 
 interface ConfigAction {
@@ -161,9 +168,11 @@ interface ConfigAction {
   logger?: LoggerType;
   // scene type action
   scene?: SceneId; // scene name
+  // delay type action
+  delay?: ConfigDelay;
 }
 
-interface ConfigCondition {}
+interface ConfigCondition { }
 
 interface ConfigEntityCondition extends ConfigCondition {
   entity: EntityId;
@@ -389,8 +398,8 @@ class AutomationsExtension {
       }
       // Check actions
       for (const action of actions) {
-        if (!action.entity && !action.scene) {
-          this.logger.error(`[Automations] Config validation error for [${key}]: action entity or action scene not defined`);
+        if (!action.entity && !action.scene && !action.delay) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: action entity, action scene, or delay not defined`);
           return;
         }
         if (action.entity && !this.zigbee.resolveEntity(action.entity)) {
@@ -437,8 +446,7 @@ class AutomationsExtension {
             const suncalc = new SunCalc();
             const times = suncalc.getTimes(new Date(), timeTrigger.latitude, timeTrigger.longitude, timeTrigger.elevation ? timeTrigger.elevation : 0) as object;
             this.logger.debug(
-              `[Automations] Sunrise at ${times[ConfigSunCalc.SUNRISE].toLocaleTimeString()} sunset at ${times[ConfigSunCalc.SUNSET].toLocaleTimeString()} for latitude:${
-                timeTrigger.latitude
+              `[Automations] Sunrise at ${times[ConfigSunCalc.SUNRISE].toLocaleTimeString()} sunset at ${times[ConfigSunCalc.SUNSET].toLocaleTimeString()} for latitude:${timeTrigger.latitude
               } longitude:${timeTrigger.longitude} elevation:${timeTrigger.elevation ? timeTrigger.elevation : 0}`,
             );
             this.log.debug(
@@ -845,12 +853,24 @@ class AutomationsExtension {
     return true;
   }
 
-  private runActions(automation: EventAutomation, actions: ConfigAction[]): void {
+  private async runActions(automation: EventAutomation, actions: ConfigAction[]): Promise<void> {
     for (const action of actions) {
       // Check if action is scene and run it
       if (action.scene && typeof action.scene === 'string') {
         this.log.warning(`Executing scene: ${action.scene}`);
-        this.runActions({ name: action.scene } as EventAutomation, this.scenes[action.scene] as ConfigAction[]);
+        await this.runActions({ name: action.scene } as EventAutomation, this.scenes[action.scene] as ConfigAction[]);
+        continue;
+      }
+
+      // Check if action is delay and run it
+      if (action.delay && typeof action.delay === 'object') {
+        let delayMs = 0;
+        if (action.delay.hours) delayMs += action.delay.hours * 3600000;
+        if (action.delay.minutes) delayMs += action.delay.minutes * 60000;
+        if (action.delay.seconds) delayMs += action.delay.seconds * 1000;
+        if (action.delay.milliseconds) delayMs += action.delay.milliseconds;
+        this.logger.debug(`[Automations] Delay automation [${automation.name}] for ${delayMs}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
         continue;
       }
 
@@ -964,14 +984,14 @@ class AutomationsExtension {
     this.turnOffAfterTimeouts[automation.name + action.entity] = timeout;
   }
 
-  private runActionsWithConditions(automation: EventAutomation, conditions: ConfigCondition[], actions: ConfigAction[]): void {
+  private async runActionsWithConditions(automation: EventAutomation, conditions: ConfigCondition[], actions: ConfigAction[]): Promise<void> {
     for (const condition of conditions) {
       // this.log.warning(`runActionsWithConditions: conditon: ${this.stringify(condition)}`);
       if (!this.checkCondition(automation, condition)) {
         return;
       }
     }
-    this.runActions(automation, actions);
+    await this.runActions(automation, actions);
   }
 
   // Stop the trigger_for timeout
