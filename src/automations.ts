@@ -157,6 +157,7 @@ interface ConfigAction {
   entity?: EntityId;
   payload?: ConfigActionPayload;
   payload_off?: ConfigActionPayload;
+  payload_toggle?: ConfigActionPayload[]; // alternates between payloads on each trigger
   turn_off_after?: TurnOffAfterType;
   logger?: LoggerType;
   // scene type action
@@ -270,6 +271,7 @@ class AutomationsExtension {
   private timeAutomations: TimeAutomations = {};
   private readonly triggerForTimeouts: Record<string, NodeJS.Timeout>;
   private readonly turnOffAfterTimeouts: Record<string, NodeJS.Timeout>;
+  private readonly togglePayloadState: Record<string, number> = {};
   private midnightTimeout: NodeJS.Timeout | undefined;
   private readonly log: InternalLogger;
 
@@ -397,8 +399,12 @@ class AutomationsExtension {
           this.logger.error(`[Automations] Config validation error for [${key}]: action entity #${action.entity}# not found`);
           return;
         }
-        if (action.entity && !action.payload) {
+        if (action.entity && !action.payload && !action.payload_toggle) {
           this.logger.error(`[Automations] Config validation error for [${key}]: action payload not defined`);
+          return;
+        }
+        if (action.payload_toggle && (!Array.isArray(action.payload_toggle) || action.payload_toggle.length < 2)) {
+          this.logger.error(`[Automations] Config validation error for [${key}]: action payload_toggle must be an array with at least 2 payloads`);
           return;
         }
         if (action.scene && !this.scenes[action.scene]) {
@@ -862,7 +868,12 @@ class AutomationsExtension {
       }
       let data: ConfigActionPayload;
       // this.log.warn('Payload:', typeof action.payload, action.payload)
-      if (typeof action.payload === 'string') {
+      if (Array.isArray(action.payload_toggle) && action.payload_toggle.length >= 2) {
+        const key = `${automation.name}::${action.entity}`;
+        const index = this.togglePayloadState[key] ?? 0;
+        data = action.payload_toggle[index];
+        this.togglePayloadState[key] = (index + 1) % action.payload_toggle.length;
+      } else if (typeof action.payload === 'string') {
         if (action.payload === ConfigPayload.TURN_ON) {
           data = { state: ConfigState.ON };
         } else if (action.payload === ConfigPayload.TURN_OFF) {

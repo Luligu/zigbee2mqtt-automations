@@ -119,6 +119,9 @@ Publish topic: **"zigbee2mqtt-scenes/Name"** and raw message: **"execute"** wher
     logger?:              ## Values: debug info warning error. Default: debug. The action will be logged on z2m logger with the specified logging level
     turn_off_after?:      ## Number: seconds to wait before turning off entity. Will send a turn_off to the entity.
     payload_off?:         ## Values: any supported attributes in an object. Will use payload_off instead of { state: "OFF" }.
+    payload_toggle?:      ## Array of payloads to alternate between on each trigger. Requires at least 2 entries.
+                          ## Resets to the first payload on extension restart.
+                          (example: [{ brightness_move: 40 }, { brightness_move: -40 }])
 ```
 
 # Trigger examples:
@@ -247,7 +250,32 @@ action:
       state_l1: ON
 ```
 
-# Complete automation examples
+### Use payload_toggle to alternate between two payloads on each trigger (e.g. dim up/down with a single hold button)
+
+```yaml
+button_dim:
+  trigger:
+    entity: My Button
+    action: hold
+  action:
+    entity: My Lamp
+    payload_toggle:
+      - { brightness_move: 40 }
+      - { brightness_move: -40 }
+
+button_release:
+  trigger:
+    entity: My Button
+    action: release
+  action:
+    entity: My Lamp
+    payload: { brightness_move: 0 }
+```
+
+The first hold sends `brightness_move: 40` (dim up), the next hold sends `brightness_move: -40` (dim down), and so on.
+The release automation stops the dimming. The toggle index resets to the first payload when the extension restarts.
+
+
 
 ### If there was a zigbee2mqtt installation in the top of the Eiffel Tower this would be the perfect automation.
 
