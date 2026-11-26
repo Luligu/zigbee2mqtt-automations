@@ -8,6 +8,16 @@ If you like this project and find it useful, please consider giving it a star on
   <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
 </a>
 
+## [Unreleased]
+
+### Fixed
+
+- [automations]: The `Run automation [...] send ...` log messages now carry a per-automation run id, so two consecutive executions of the same action are no longer collapsed in the frontend log. zigbee2mqtt publishes to `bridge/logging` only when the payload differs from the previous one, which made the second (successful) execution invisible.
+
+<a href="https://www.buymeacoffee.com/luligugithub">
+  <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
+</a>
+
 ## [3.0.0] - 2025-09-11
 
 ### Added

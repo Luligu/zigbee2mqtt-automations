@@ -112,6 +112,7 @@ class AutomationsExtension {
     turnOffAfterTimeouts;
     midnightTimeout;
     log;
+    runSequence = {};
     constructor(zigbee, mqtt, state, publishEntityState, eventBus, enableDisableExtension, restartCallback, addExtension, settings, logger) {
         this.zigbee = zigbee;
         this.mqtt = mqtt;
@@ -679,14 +680,18 @@ class AutomationsExtension {
                 this.logger.error(`[Automations] Run automation [${automation.name}] for entity #${action.entity}# error: payload can be turn_on turn_off toggle or an object`);
                 return;
             }
+            // Include a per-automation run id in the log message: zigbee2mqtt publishes to bridge/logging only
+            // when the payload differs from the previous one, so identical consecutive messages would be dropped.
+            const runId = (this.runSequence[automation.name] = (this.runSequence[automation.name] ?? 0) + 1);
+            const logMessage = `[Automations] Run automation [${automation.name}] (run ${runId}) send ${this.payloadStringify(data)} to entity #${action.entity}#`;
             if (action.logger === 'info')
-                this.logger.info(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+                this.logger.info(logMessage);
             else if (action.logger === 'warning')
-                this.logger.warning(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+                this.logger.warning(logMessage);
             else if (action.logger === 'error')
-                this.logger.error(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+                this.logger.error(logMessage);
             else
-                this.logger.debug(`[Automations] Run automation [${automation.name}] send ${this.payloadStringify(data)} to entity #${action.entity}#`);
+                this.logger.debug(logMessage);
             // this.mqtt.onMessage(`${this.mqttBaseTopic}/${entity.name}/set`, Buffer.from(this.payloadStringify(data)));
             // This is even faster cause we skip one passage.
             this.eventBus.emitMQTTMessage({
